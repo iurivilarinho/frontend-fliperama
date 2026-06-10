@@ -52,54 +52,7 @@
           "D:/**",
           "E:/**"
         ]
-      },
-      "capabilities": [
-        {
-          "identifier": "default",
-          "windows": [
-            "main",
-            "overlay_mini"
-          ],
-          "permissions": [
-            "core:window:allow-show",
-            "core:window:allow-hide",
-            "core:window:allow-minimize",
-            "core:window:allow-unminimize",
-            "core:window:allow-close",
-            "core:window:allow-set-decorations",
-            "core:window:allow-set-fullscreen",
-            "core:window:allow-set-always-on-top",
-            "core:window:allow-set-focus",
-            "core:window:allow-maximize",
-            "core:window:allow-unmaximize",
-            "core:window:allow-set-skip-taskbar",
-            "core:window:allow-set-size",
-            "core:window:allow-set-position",
-            "core:window:allow-current-monitor",
-            "core:default",
-            "sql:default",
-            "dialog:default",
-            "fs:default",
-            "fs:read-all",
-            "fs:write-all",
-            "fs:allow-mkdir",
-            {
-              "identifier": "fs:scope",
-              "allow": [
-                "$HOME/**",
-                "$DOWNLOAD/**",
-                "$DOCUMENT/**",
-                "$DESKTOP/**",
-                "$APPDATA/**",
-                "$APPLOCALDATA/**",
-                "C:/**",
-                "D:/**",
-                "E:/**"
-              ]
-            }
-          ]
-        }
-      ]
+      }
     }
   },
   "bundle": {

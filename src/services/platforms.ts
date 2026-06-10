@@ -11,6 +11,9 @@ import {
 export type ManageablePlatform = {
   name: string;
   romsDir: string;
+  emulatorPath: string;
+  corePath: string | null;
+  databaseFolder: string;
   extensions: string[]; // efetivas (override do admin ou padrão do catálogo)
   defaultExtensions: string[];
   enabled: boolean;
@@ -42,6 +45,9 @@ export async function listManageablePlatforms(): Promise<ManageablePlatform[]> {
     result.push({
       name,
       romsDir: cfg.romsDir,
+      emulatorPath: cfg.emulatorPath,
+      corePath: cfg.corePath,
+      databaseFolder: cfg.databaseFolder,
       extensions,
       defaultExtensions: cfg.romExtensions,
       enabled: override?.enabled ?? true,

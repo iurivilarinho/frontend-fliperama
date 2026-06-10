@@ -2,16 +2,14 @@ import { Route, Routes } from "react-router-dom";
 import { AdminAuthProvider, useAdminAuth } from "./AdminAuthContext";
 import { AdminLayout } from "./AdminLayout";
 import { AdminLoginPage } from "./AdminLoginPage";
-import {
-  AdminOverviewPage,
-  AdminPlaceholderPage,
-} from "./pages/AdminOverviewPage";
+import { AdminOverviewPage } from "./pages/AdminOverviewPage";
 import { PricingPage } from "./pages/PricingPage";
 import { GamesUploadPage } from "./pages/GamesUploadPage";
 import { RomsPage } from "./pages/RomsPage";
 import { FinancialPage } from "./pages/FinancialPage";
 import { UsagePage } from "./pages/UsagePage";
 import { SavesPage } from "./pages/SavesPage";
+import { CatalogPage } from "./pages/CatalogPage";
 
 function AdminGate() {
   const { isAuthed } = useAdminAuth();
@@ -30,10 +28,7 @@ function AdminGate() {
         <Route path="financeiro" element={<FinancialPage />} />
         <Route path="uso" element={<UsagePage />} />
         <Route path="saves" element={<SavesPage />} />
-        <Route
-          path="catalogo"
-          element={<AdminPlaceholderPage title="Catálogo" />}
-        />
+        <Route path="catalogo" element={<CatalogPage />} />
         <Route path="*" element={<AdminOverviewPage />} />
       </Route>
     </Routes>

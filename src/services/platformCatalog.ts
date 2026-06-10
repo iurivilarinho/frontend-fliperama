@@ -184,6 +184,10 @@ export function getPlatformCatalogEntry(
   return PLATFORM_CATALOG[platformName] ?? null;
 }
 
+export function listCatalogPlatformNames(): string[] {
+  return Object.keys(PLATFORM_CATALOG);
+}
+
 /**
  * Resolve os caminhos absolutos de uma plataforma a partir da raiz do
  * HyperSpin. Retorna null quando a plataforma não está no catálogo (sem

@@ -10,6 +10,14 @@ import { launchSelectedGame } from "../../services/emulatorLauncher";
 import { usePlaySession } from "./session/PlaySessionContext";
 import { HyperspinWheel } from "./HyperspinWheel";
 import { recordGameLaunch } from "../../services/db/usage";
+import {
+  getStatsForPlatform,
+  setFavorite,
+  type GameStat,
+} from "../../services/db/gameStats";
+
+type FilterMode = "all" | "favorites" | "mostplayed";
+type SortMode = "az" | "plays" | "year";
 
 type GamesPageLocationState = {
   platform: HyperspinPlatformTheme;
@@ -90,8 +98,21 @@ export function GamesPage() {
     null,
   );
   const [keyboardUnlockAt, setKeyboardUnlockAt] = useState(0);
+  const [stats, setStats] = useState<Record<string, GameStat>>({});
+  const [filterMode, setFilterMode] = useState<FilterMode>("all");
+  const [genreFilter, setGenreFilter] = useState<string>("all");
+  const [sortMode, setSortMode] = useState<SortMode>("az");
 
   const searchInputRef = useRef<HTMLInputElement | null>(null);
+
+  const loadStats = useCallback(async () => {
+    if (!platform) return;
+    setStats(await getStatsForPlatform(platform.name));
+  }, [platform]);
+
+  useEffect(() => {
+    void loadStats();
+  }, [loadStats]);
 
   useEffect(() => {
     const handleWindowFocus = () => {
@@ -113,27 +134,54 @@ export function GamesPage() {
     resetSession();
   }, [navigate, resetSession, status]);
 
+  const genres = useMemo(() => {
+    const set = new Set<string>();
+    for (const g of games) {
+      if (g.genre) set.add(g.genre);
+    }
+    return Array.from(set).sort((a, b) => a.localeCompare(b));
+  }, [games]);
+
   const filteredGames = useMemo(() => {
     const normalizedSearch = searchTerm.trim().toLowerCase();
 
-    if (!normalizedSearch) {
-      return games;
-    }
+    let list = games.filter((game) => {
+      if (normalizedSearch) {
+        const haystack = [
+          game.description,
+          game.name,
+          game.manufacturer ?? "",
+          game.genre ?? "",
+          game.year ?? "",
+        ]
+          .join(" ")
+          .toLowerCase();
+        if (!haystack.includes(normalizedSearch)) return false;
+      }
 
-    return games.filter((game) => {
-      const haystack = [
-        game.description,
-        game.name,
-        game.manufacturer ?? "",
-        game.genre ?? "",
-        game.year ?? "",
-      ]
-        .join(" ")
-        .toLowerCase();
+      if (genreFilter !== "all" && game.genre !== genreFilter) return false;
 
-      return haystack.includes(normalizedSearch);
+      const stat = stats[game.name];
+      if (filterMode === "favorites" && !stat?.favorite) return false;
+      if (filterMode === "mostplayed" && !(stat?.playCount ?? 0)) return false;
+
+      return true;
     });
-  }, [games, searchTerm]);
+
+    list = [...list].sort((a, b) => {
+      if (sortMode === "plays") {
+        return (stats[b.name]?.playCount ?? 0) - (stats[a.name]?.playCount ?? 0);
+      }
+      if (sortMode === "year") {
+        return (Number(b.year) || 0) - (Number(a.year) || 0);
+      }
+      return a.description.localeCompare(b.description, undefined, {
+        numeric: true,
+      });
+    });
+
+    return list;
+  }, [games, searchTerm, genreFilter, filterMode, sortMode, stats]);
 
   const selectedGame = useMemo(() => {
     if (filteredGames.length === 0) return null;
@@ -185,7 +233,16 @@ export function GamesPage() {
 
   useEffect(() => {
     setSelectedIndex(0);
-  }, [searchTerm]);
+  }, [searchTerm, genreFilter, filterMode, sortMode]);
+
+  const selectedGameForFav = filteredGames[safeSelectedIndex] ?? null;
+
+  const toggleFavorite = useCallback(async () => {
+    if (!platform || !selectedGameForFav) return;
+    const current = stats[selectedGameForFav.name]?.favorite ?? false;
+    await setFavorite(platform.name, selectedGameForFav.name, !current);
+    await loadStats();
+  }, [platform, selectedGameForFav, stats, loadStats]);
 
   useEffect(() => {
     if (searchVisible) {
@@ -239,9 +296,10 @@ export function GamesPage() {
         console.error("Erro ao executar jogo:", error);
       } finally {
         setLaunchingGameName(null);
+        void loadStats();
       }
     },
-    [launchingGameName, platform],
+    [launchingGameName, platform, loadStats],
   );
 
   useEffect(() => {
@@ -258,6 +316,14 @@ export function GamesPage() {
 
         event.preventDefault();
         setSearchVisible(true);
+        return;
+      }
+
+      if (event.key.toLowerCase() === "f" && !event.ctrlKey && !event.metaKey) {
+        if (isTypingField) return;
+        if (Date.now() < keyboardUnlockAt) return;
+        event.preventDefault();
+        void toggleFavorite();
         return;
       }
 
@@ -322,6 +388,7 @@ export function GamesPage() {
     selectedGame,
     launchGame,
     keyboardUnlockAt,
+    toggleFavorite,
   ]);
 
   if (!isSessionActive) {
@@ -372,8 +439,56 @@ export function GamesPage() {
           {platform.name}
         </div>
         <div className="rounded-lg bg-black/40 px-3 py-2 text-[11px] text-zinc-300 backdrop-blur-sm">
-          Enter inicia • / filtra • Esc volta • Ctrl+M sai
+          Enter inicia • / busca • F favorita • Esc volta • Ctrl+M sai
         </div>
+      </div>
+
+      {/* barra de filtros e ordenação */}
+      <div className="absolute left-8 top-20 z-30 flex flex-wrap items-center gap-2">
+        {(
+          [
+            ["all", "Todos"],
+            ["favorites", "★ Favoritos"],
+            ["mostplayed", "Mais jogados"],
+          ] as const
+        ).map(([mode, label]) => (
+          <button
+            key={mode}
+            type="button"
+            onClick={() => setFilterMode(mode)}
+            className={[
+              "rounded-full border px-3 py-1 text-xs font-semibold backdrop-blur-sm transition",
+              filterMode === mode
+                ? "border-emerald-400 bg-emerald-500/20 text-emerald-200"
+                : "border-white/10 bg-black/40 text-zinc-300 hover:border-zinc-400",
+            ].join(" ")}
+          >
+            {label}
+          </button>
+        ))}
+
+        <select
+          value={genreFilter}
+          onChange={(e) => setGenreFilter(e.target.value)}
+          className="rounded-full border border-white/10 bg-black/50 px-3 py-1 text-xs text-zinc-200 backdrop-blur-sm outline-none"
+        >
+          <option value="all">Todos os gêneros</option>
+          {genres.map((g) => (
+            <option key={g} value={g}>
+              {g}
+            </option>
+          ))}
+        </select>
+
+        <select
+          value={sortMode}
+          onChange={(e) => setSortMode(e.target.value as SortMode)}
+          className="rounded-full border border-white/10 bg-black/50 px-3 py-1 text-xs text-zinc-200 backdrop-blur-sm outline-none"
+        >
+          <option value="az">A–Z</option>
+          <option value="plays">Mais jogados</option>
+          <option value="year">Lançamentos (ano)</option>
+        </select>
       </div>
 
       {searchVisible ? (
@@ -427,6 +542,16 @@ export function GamesPage() {
 
           {selectedGame ? (
             <div className="pointer-events-none absolute bottom-10 left-8 z-30 max-w-[46%]">
+              <div className="flex items-center gap-3">
+                {stats[selectedGame.name]?.favorite ? (
+                  <span className="text-3xl text-amber-300 drop-shadow">★</span>
+                ) : null}
+                {(stats[selectedGame.name]?.playCount ?? 0) > 0 ? (
+                  <span className="rounded-full bg-black/45 px-2 py-0.5 text-xs text-zinc-300 backdrop-blur-sm">
+                    {stats[selectedGame.name]?.playCount}x jogado
+                  </span>
+                ) : null}
+              </div>
               <div className="truncate text-5xl font-black uppercase tracking-wide text-white drop-shadow-[0_2px_24px_rgba(0,0,0,0.8)]">
                 {selectedGame.description}
               </div>

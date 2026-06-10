@@ -6,7 +6,7 @@ const MODULES = [
   { label: "ROMs (biblioteca)", status: "Pronto", to: "/admin/rooms" },
   { label: "Financeiro", status: "Pronto", to: "/admin/financeiro" },
   { label: "Controle de uso", status: "Pronto", to: "/admin/uso" },
-  { label: "Saves", status: "Em breve", to: "/admin/saves" },
+  { label: "Saves", status: "Pronto", to: "/admin/saves" },
 ];
 
 export function AdminOverviewPage() {

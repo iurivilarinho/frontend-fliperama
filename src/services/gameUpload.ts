@@ -2,21 +2,13 @@ import { basename, join } from "@tauri-apps/api/path";
 import { copyFile, exists, mkdir } from "@tauri-apps/plugin-fs";
 import { registerUploadedGame } from "./db/platformConfig";
 import type { ManageablePlatform } from "./platforms";
+import { getExtension, isExtensionAllowed, removeExtension } from "./uploadRules";
 
 export type UploadResult = {
   file: string;
   ok: boolean;
   reason?: string;
 };
-
-function getExtension(name: string): string {
-  const idx = name.lastIndexOf(".");
-  return idx >= 0 ? name.slice(idx).toLowerCase() : "";
-}
-
-function removeExtension(name: string): string {
-  return name.replace(/\.[^.]+$/, "");
-}
 
 /**
  * Copia os arquivos enviados para a pasta de ROMs da plataforma, validando a
@@ -32,17 +24,14 @@ export async function uploadGameFiles(
     await mkdir(platform.romsDir, { recursive: true });
   }
 
-  const allowed = platform.extensions.map((e) => e.toLowerCase());
-
   for (const source of sourcePaths) {
     const fileName = await basename(source);
-    const ext = getExtension(fileName);
 
-    if (!allowed.includes(ext)) {
+    if (!isExtensionAllowed(fileName, platform.extensions)) {
       results.push({
         file: fileName,
         ok: false,
-        reason: `Extensão ${ext || "(sem)"} não permitida para ${platform.name}`,
+        reason: `Extensão ${getExtension(fileName) || "(sem)"} não permitida para ${platform.name}`,
       });
       continue;
     }

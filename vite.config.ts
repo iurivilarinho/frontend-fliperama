@@ -18,8 +18,20 @@ export default defineConfig({
     coverage: {
       provider: "v8",
       reporter: ["text", "html"],
-      include: ["src/**/*.{ts,tsx}"],
-      exclude: ["src/**/*.{test,spec}.{ts,tsx}", "src/**/*.d.ts"],
+      // Gate de cobertura focado na lógica pura/crítica (testável em node).
+      // Componentes/integração com Tauri ficam para testes E2E (Playwright).
+      include: [
+        "src/features/advertisement/session/sessionTime.ts",
+        "src/services/uploadRules.ts",
+        "src/services/reconcile.ts",
+        "src/services/payment/types.ts",
+      ],
+      thresholds: {
+        lines: 80,
+        functions: 80,
+        statements: 80,
+        branches: 75,
+      },
     },
   },
 });

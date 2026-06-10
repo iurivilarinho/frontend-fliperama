@@ -5,6 +5,7 @@ import {
   listCatalogPlatformNames,
   resolvePlatformConfig,
 } from "./platformCatalog";
+import { reconcileNames } from "./reconcile";
 
 export type PlatformReconciliation = {
   platform: string;
@@ -28,10 +29,6 @@ export type LibraryReport = {
   };
 };
 
-function normalizeKey(value: string): string {
-  return value.trim().toLowerCase();
-}
-
 function removeExtension(fileName: string): string {
   return fileName.replace(/\.[^.]+$/i, "");
 }
@@ -39,19 +36,18 @@ function removeExtension(fileName: string): string {
 async function readRomBaseNames(
   romsDir: string,
   extensions: string[],
-): Promise<Map<string, string>> {
-  const map = new Map<string, string>();
-  if (!(await exists(romsDir))) return map;
+): Promise<string[]> {
+  if (!(await exists(romsDir))) return [];
 
   const entries = await readDir(romsDir);
+  const out: string[] = [];
   for (const entry of entries) {
     if (!entry.isFile || !entry.name) continue;
     const lower = entry.name.toLowerCase();
     if (!extensions.some((e) => lower.endsWith(e))) continue;
-    const base = removeExtension(entry.name);
-    map.set(normalizeKey(base), entry.name);
+    out.push(removeExtension(entry.name));
   }
-  return map;
+  return out;
 }
 
 async function readDbGameNames(xmlPath: string): Promise<string[]> {
@@ -78,34 +74,21 @@ export async function reconcilePlatform(
     `${cfg.databaseFolder}.xml`,
   );
 
-  const [romMap, gameNames] = await Promise.all([
+  const [romBaseNames, gameNames] = await Promise.all([
     readRomBaseNames(cfg.romsDir, cfg.romExtensions),
     readDbGameNames(xmlPath),
   ]);
 
-  const gameKeys = new Set(gameNames.map(normalizeKey));
+  const rec = reconcileNames(gameNames, romBaseNames);
 
-  const missingRoms: string[] = [];
-  let matched = 0;
-  for (const name of gameNames) {
-    if (romMap.has(normalizeKey(name))) matched += 1;
-    else missingRoms.push(name);
-  }
-
-  const orphanRoms: string[] = [];
-  for (const [key, fileName] of romMap) {
-    if (!gameKeys.has(key)) orphanRoms.push(fileName);
-  }
-
-  const gamesCount = gameNames.length;
   return {
     platform: platformName,
-    romsCount: romMap.size,
-    gamesCount,
-    matched,
-    missingRoms: missingRoms.sort((a, b) => a.localeCompare(b)),
-    orphanRoms: orphanRoms.sort((a, b) => a.localeCompare(b)),
-    occupancyPct: gamesCount > 0 ? Math.round((matched / gamesCount) * 100) : 0,
+    romsCount: romBaseNames.length,
+    gamesCount: gameNames.length,
+    matched: rec.matched,
+    missingRoms: rec.missingRoms,
+    orphanRoms: rec.orphanRoms,
+    occupancyPct: rec.occupancyPct,
   };
 }
 

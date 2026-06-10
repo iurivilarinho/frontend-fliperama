@@ -11,6 +11,7 @@ import { GamesUploadPage } from "./pages/GamesUploadPage";
 import { RomsPage } from "./pages/RomsPage";
 import { FinancialPage } from "./pages/FinancialPage";
 import { UsagePage } from "./pages/UsagePage";
+import { SavesPage } from "./pages/SavesPage";
 
 function AdminGate() {
   const { isAuthed } = useAdminAuth();
@@ -28,7 +29,7 @@ function AdminGate() {
         <Route path="rooms" element={<RomsPage />} />
         <Route path="financeiro" element={<FinancialPage />} />
         <Route path="uso" element={<UsagePage />} />
-        <Route path="saves" element={<AdminPlaceholderPage title="Saves" />} />
+        <Route path="saves" element={<SavesPage />} />
         <Route
           path="catalogo"
           element={<AdminPlaceholderPage title="Catálogo" />}

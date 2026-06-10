@@ -24,6 +24,7 @@ import {
   expireStaleSessions,
   markSessionStatus,
 } from "../../../services/db/sessions";
+import { backupSaves } from "../../../services/saves";
 
 const DEFAULT_MINUTES_OPTIONS = [5, 10, 15] as const;
 const SESSION_STORAGE_KEY = "arcade-play-session";
@@ -180,6 +181,8 @@ export function PlaySessionProvider({ children }: { children: ReactNode }) {
       if (remaining <= 0) {
         setStatus("expired");
         void markSessionStatus(sessionIdRef.current, "expired");
+        // Backup automático dos saves ao encerrar a sessão.
+        void backupSaves();
         clearPersistedSession();
       }
     };

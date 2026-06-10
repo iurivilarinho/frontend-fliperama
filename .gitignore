@@ -25,3 +25,8 @@ dist-ssr
 
 # Cobertura de testes
 coverage
+
+# Playwright
+test-results
+playwright-report
+playwright/.cache

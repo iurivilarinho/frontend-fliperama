@@ -13,10 +13,11 @@ import {
 } from "../../services/payment/types";
 import { formatBRL, getPriceForMinutes } from "./session/pricing";
 import { listActiveTiers } from "../../services/db/pricing";
+import type { SessionPaymentInfo } from "./session/PlaySessionContext";
 
 type PaymentTimeSelectionScreenProps = {
   durationOptionsMinutes: readonly number[];
-  onSelectDuration: (minutes: number) => void;
+  onSelectDuration: (minutes: number, payment?: SessionPaymentInfo) => void;
 };
 
 type PriceOption = { minutes: number; price: number };
@@ -87,9 +88,11 @@ export function PaymentTimeSelectionScreen({
     (minutes: number) => {
       if (grantedRef.current) return;
       grantedRef.current = true;
-      onSelectDuration(minutes);
+      const amountCents = Math.round(priceForMinutes(minutes) * 100);
+      const providerId = order?.id != null ? String(order.id) : null;
+      onSelectDuration(minutes, { amountCents, providerId, status: "approved" });
     },
-    [onSelectDuration],
+    [onSelectDuration, priceForMinutes, order],
   );
 
   const startPaymentFlow = useCallback(

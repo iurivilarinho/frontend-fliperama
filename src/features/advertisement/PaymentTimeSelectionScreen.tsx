@@ -12,11 +12,14 @@ import {
   type PixOrder,
 } from "../../services/payment/types";
 import { formatBRL, getPriceForMinutes } from "./session/pricing";
+import { listActiveTiers } from "../../services/db/pricing";
 
 type PaymentTimeSelectionScreenProps = {
   durationOptionsMinutes: readonly number[];
   onSelectDuration: (minutes: number) => void;
 };
+
+type PriceOption = { minutes: number; price: number };
 
 type Step = "choose" | "pay";
 
@@ -45,6 +48,41 @@ export function PaymentTimeSelectionScreen({
 
   const grantedRef = useRef(false);
 
+  // Faixas de preço: carregadas do banco (admin). Cai para o config estático
+  // se o banco não estiver disponível (ambiente web/dev sem Tauri).
+  const [priceOptions, setPriceOptions] = useState<PriceOption[]>(() =>
+    durationOptionsMinutes.map((m) => ({
+      minutes: m,
+      price: getPriceForMinutes(m),
+    })),
+  );
+
+  useEffect(() => {
+    let active = true;
+    listActiveTiers()
+      .then((tiers) => {
+        if (!active || tiers.length === 0) return;
+        setPriceOptions(
+          tiers.map((t) => ({ minutes: t.minutes, price: t.priceCents / 100 })),
+        );
+      })
+      .catch(() => {
+        // mantém o fallback estático
+      });
+    return () => {
+      active = false;
+    };
+  }, [durationOptionsMinutes]);
+
+  const priceForMinutes = useCallback(
+    (minutes: number): number => {
+      const found = priceOptions.find((o) => o.minutes === minutes);
+      if (found) return found.price;
+      return getPriceForMinutes(minutes);
+    },
+    [priceOptions],
+  );
+
   const grantAccess = useCallback(
     (minutes: number) => {
       if (grantedRef.current) return;
@@ -71,7 +109,7 @@ export function PaymentTimeSelectionScreen({
       setQrDataUrl(null);
 
       try {
-        const amount = getPriceForMinutes(minutes);
+        const amount = priceForMinutes(minutes);
         const created = await createPixCharge({
           durationMinutes: minutes,
           amount,
@@ -88,7 +126,7 @@ export function PaymentTimeSelectionScreen({
         setLoading(false);
       }
     },
-    [grantAccess],
+    [grantAccess, priceForMinutes],
   );
 
   // Renderiza o QR a partir do copia-e-cola (ou cai no base64 do backend).
@@ -185,8 +223,8 @@ export function PaymentTimeSelectionScreen({
   }, []);
 
   const priceForSelected = useMemo(
-    () => (selectedMinutes != null ? getPriceForMinutes(selectedMinutes) : 0),
-    [selectedMinutes],
+    () => (selectedMinutes != null ? priceForMinutes(selectedMinutes) : 0),
+    [selectedMinutes, priceForMinutes],
   );
 
   return (
@@ -209,7 +247,7 @@ export function PaymentTimeSelectionScreen({
             </p>
 
             <div className="mt-8 grid grid-cols-1 gap-3 sm:grid-cols-3">
-              {durationOptionsMinutes.map((minutes) => (
+              {priceOptions.map(({ minutes }) => (
                 <button
                   key={minutes}
                   type="button"
@@ -218,7 +256,7 @@ export function PaymentTimeSelectionScreen({
                 >
                   <div className="text-lg font-bold">{minutes} min</div>
                   <div className="mt-1 text-emerald-300">
-                    {formatBRL(getPriceForMinutes(minutes))}
+                    {formatBRL(priceForMinutes(minutes))}
                   </div>
                 </button>
               ))}

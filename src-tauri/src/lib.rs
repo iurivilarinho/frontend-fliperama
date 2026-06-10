@@ -292,11 +292,123 @@ fn stop_active_game() -> Result<(), String> {
     }
 }
 
+fn db_migrations() -> Vec<tauri_plugin_sql::Migration> {
+  use tauri_plugin_sql::{Migration, MigrationKind};
+
+  vec![Migration {
+    version: 1,
+    description: "schema inicial do fliperama (admin, pricing, rooms, sessoes, pagamentos, uso, saves)",
+    sql: "
+      CREATE TABLE IF NOT EXISTS settings (
+        key TEXT PRIMARY KEY,
+        value TEXT NOT NULL
+      );
+
+      CREATE TABLE IF NOT EXISTS pricing_tiers (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        minutes INTEGER NOT NULL,
+        price_cents INTEGER NOT NULL,
+        active INTEGER NOT NULL DEFAULT 1,
+        sort_order INTEGER NOT NULL DEFAULT 0
+      );
+
+      CREATE TABLE IF NOT EXISTS platform_config (
+        platform_name TEXT PRIMARY KEY,
+        rom_extensions TEXT,
+        enabled INTEGER NOT NULL DEFAULT 1
+      );
+
+      CREATE TABLE IF NOT EXISTS game_stats (
+        platform_name TEXT NOT NULL,
+        rom_name TEXT NOT NULL,
+        favorite INTEGER NOT NULL DEFAULT 0,
+        play_count INTEGER NOT NULL DEFAULT 0,
+        last_played_at TEXT,
+        PRIMARY KEY (platform_name, rom_name)
+      );
+
+      CREATE TABLE IF NOT EXISTS uploaded_games (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        platform_name TEXT NOT NULL,
+        rom_name TEXT NOT NULL,
+        title TEXT,
+        file_path TEXT NOT NULL,
+        created_at TEXT NOT NULL
+      );
+
+      CREATE TABLE IF NOT EXISTS rooms (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        name TEXT NOT NULL,
+        description TEXT,
+        created_at TEXT NOT NULL
+      );
+
+      CREATE TABLE IF NOT EXISTS room_games (
+        room_id INTEGER NOT NULL,
+        platform_name TEXT NOT NULL,
+        rom_name TEXT NOT NULL,
+        PRIMARY KEY (room_id, platform_name, rom_name)
+      );
+
+      CREATE TABLE IF NOT EXISTS sessions (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        started_at TEXT NOT NULL,
+        ended_at TEXT,
+        duration_minutes INTEGER NOT NULL,
+        status TEXT NOT NULL DEFAULT 'active',
+        expires_at TEXT
+      );
+
+      CREATE TABLE IF NOT EXISTS usage_events (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        session_id INTEGER,
+        platform_name TEXT,
+        rom_name TEXT,
+        started_at TEXT NOT NULL,
+        ended_at TEXT
+      );
+
+      CREATE TABLE IF NOT EXISTS payments (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        session_id INTEGER,
+        provider_id TEXT,
+        amount_cents INTEGER NOT NULL,
+        minutes INTEGER NOT NULL,
+        status TEXT NOT NULL DEFAULT 'pending',
+        created_at TEXT NOT NULL,
+        paid_at TEXT
+      );
+
+      CREATE TABLE IF NOT EXISTS saves (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        user_id TEXT,
+        platform_name TEXT NOT NULL,
+        rom_name TEXT NOT NULL,
+        file_path TEXT NOT NULL,
+        updated_at TEXT NOT NULL
+      );
+
+      INSERT INTO pricing_tiers (minutes, price_cents, active, sort_order)
+      SELECT 5, 200, 1, 0 WHERE NOT EXISTS (SELECT 1 FROM pricing_tiers);
+      INSERT INTO pricing_tiers (minutes, price_cents, active, sort_order)
+      SELECT 10, 300, 1, 1 WHERE NOT EXISTS (SELECT 1 FROM pricing_tiers WHERE minutes = 10);
+      INSERT INTO pricing_tiers (minutes, price_cents, active, sort_order)
+      SELECT 15, 500, 1, 2 WHERE NOT EXISTS (SELECT 1 FROM pricing_tiers WHERE minutes = 15);
+    ",
+    kind: MigrationKind::Up,
+  }]
+}
+
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
   tauri::Builder::default()
     .plugin(tauri_plugin_dialog::init())
     .plugin(tauri_plugin_fs::init())
+    .plugin(
+      tauri_plugin_sql::Builder::default()
+        .add_migrations("sqlite:fliperama.db", db_migrations())
+        .build(),
+    )
     .manage(FocusState(Mutex::new(0)))
     .invoke_handler(tauri::generate_handler![
       save_foreground_window,

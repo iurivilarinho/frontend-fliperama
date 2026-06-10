@@ -1,18 +1,46 @@
-import { Route, Routes } from "react-router-dom";
+import { useEffect } from "react";
+import { Route, Routes, useNavigate } from "react-router-dom";
 // import { ProtectedRoute } from "./ProtectedRoute";
 import { GamesPage } from "../../features/advertisement/GamesPage";
 import { PlatformSelectionPage } from "../../features/advertisement/PlatformSelectionPage";
 import { NotFound } from "../../features/shared/NotFound";
 import { SessionMiniOverlayPage } from "../../features/advertisement/session/SessionMiniOverlayPage";
+import { AdminApp } from "../../features/admin/AdminApp";
 import { ROUTES } from "./routes";
 
+/** Atalho global para abrir o painel admin: Ctrl+Shift+A. */
+function AdminShortcut() {
+  const navigate = useNavigate();
+
+  useEffect(() => {
+    const handler = (event: KeyboardEvent) => {
+      if (
+        event.ctrlKey &&
+        event.shiftKey &&
+        event.key.toLowerCase() === "a"
+      ) {
+        event.preventDefault();
+        navigate("/admin");
+      }
+    };
+    window.addEventListener("keydown", handler);
+    return () => window.removeEventListener("keydown", handler);
+  }, [navigate]);
+
+  return null;
+}
+
 export const AppRoutes = () => (
-  <Routes>
-    <Route>
-      <Route path={ROUTES.homepage} element={<PlatformSelectionPage />} />
-      <Route path="/games" element={<GamesPage />} />
-      <Route path={ROUTES.player_mini} element={<SessionMiniOverlayPage />} />
-    </Route>
-    <Route path={ROUTES.notFound} element={<NotFound />} />
-  </Routes>
+  <>
+    <AdminShortcut />
+    <Routes>
+      <Route>
+        <Route path={ROUTES.homepage} element={<PlatformSelectionPage />} />
+        <Route path="/games" element={<GamesPage />} />
+        <Route path={ROUTES.player_mini} element={<SessionMiniOverlayPage />} />
+        <Route path="/admin/*" element={<AdminApp />} />
+      </Route>
+      <Route path={ROUTES.notFound} element={<NotFound />} />
+    </Routes>
+  </>
 );

@@ -1,14 +1,29 @@
 import { useCallback, useEffect, useState } from "react";
-import { RefreshCw } from "lucide-react";
+import { FileSpreadsheet, FileText, RefreshCw } from "lucide-react";
+import {
+  Bar,
+  BarChart,
+  CartesianGrid,
+  ResponsiveContainer,
+  Tooltip,
+  XAxis,
+  YAxis,
+} from "recharts";
 import { AdminPageHeader } from "../AdminLayout";
 import {
   getFinancialSummary,
+  getPeakHours,
   getRecentPayments,
   getRevenueByDay,
   type FinancialSummary,
   type PaymentRow,
+  type PeakHour,
   type RevenueByDay,
 } from "../../../services/db/analytics";
+import {
+  exportFinancialExcel,
+  exportFinancialPdf,
+} from "../../../services/reports";
 
 function brl(cents: number): string {
   return (cents / 100).toLocaleString("pt-BR", {
@@ -40,34 +55,61 @@ export function FinancialPage() {
   const [summary, setSummary] = useState<FinancialSummary | null>(null);
   const [byDay, setByDay] = useState<RevenueByDay[]>([]);
   const [payments, setPayments] = useState<PaymentRow[]>([]);
+  const [peakHours, setPeakHours] = useState<PeakHour[]>([]);
+  const [periodDays, setPeriodDays] = useState(14);
   const [loading, setLoading] = useState(true);
+  const [exporting, setExporting] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   const load = useCallback(async () => {
     setLoading(true);
     setError(null);
     try {
-      const [s, d, p] = await Promise.all([
+      const [s, d, p, h] = await Promise.all([
         getFinancialSummary(),
-        getRevenueByDay(14),
-        getRecentPayments(20),
+        getRevenueByDay(periodDays),
+        getRecentPayments(100),
+        getPeakHours(),
       ]);
       setSummary(s);
       setByDay(d);
       setPayments(p);
+      setPeakHours(h);
     } catch (caught) {
       console.error(caught);
       setError("Não foi possível carregar os dados financeiros.");
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [periodDays]);
 
   useEffect(() => {
     void load();
   }, [load]);
 
-  const maxDay = Math.max(1, ...byDay.map((d) => d.cents));
+  const handleExport = async (kind: "excel" | "pdf") => {
+    if (!summary) return;
+    setExporting(true);
+    try {
+      const data = { summary, payments, byDay };
+      if (kind === "excel") await exportFinancialExcel(data);
+      else await exportFinancialPdf(data);
+    } catch (caught) {
+      console.error(caught);
+      setError("Falha ao exportar o relatório.");
+    } finally {
+      setExporting(false);
+    }
+  };
+
+  const revenueChartData = byDay.map((d) => ({
+    dia: d.day.slice(5),
+    valor: Math.round(d.cents) / 100,
+  }));
+  const peakChartData = peakHours.map((h) => ({
+    hora: `${h.hour}h`,
+    sessões: h.count,
+  }));
 
   return (
     <div>
@@ -75,13 +117,41 @@ export function FinancialPage() {
         title="Financeiro"
         description="Receita, pagamentos e desempenho. Dados locais do totem (SQLite)."
         actions={
-          <button
-            type="button"
-            onClick={() => void load()}
-            className="flex items-center gap-2 rounded-lg border border-zinc-600 bg-zinc-800 px-4 py-2 text-sm font-semibold hover:border-emerald-400"
-          >
-            <RefreshCw className="h-4 w-4" /> Atualizar
-          </button>
+          <div className="flex flex-wrap items-center gap-2">
+            <select
+              value={periodDays}
+              onChange={(e) => setPeriodDays(Number(e.target.value))}
+              className="rounded-lg border border-zinc-700 bg-zinc-800 px-3 py-2 text-sm outline-none"
+            >
+              <option value={7}>7 dias</option>
+              <option value={14}>14 dias</option>
+              <option value={30}>30 dias</option>
+              <option value={90}>90 dias</option>
+            </select>
+            <button
+              type="button"
+              disabled={exporting}
+              onClick={() => void handleExport("excel")}
+              className="flex items-center gap-2 rounded-lg border border-zinc-600 bg-zinc-800 px-3 py-2 text-sm font-semibold hover:border-emerald-400 disabled:opacity-50"
+            >
+              <FileSpreadsheet className="h-4 w-4" /> Excel
+            </button>
+            <button
+              type="button"
+              disabled={exporting}
+              onClick={() => void handleExport("pdf")}
+              className="flex items-center gap-2 rounded-lg border border-zinc-600 bg-zinc-800 px-3 py-2 text-sm font-semibold hover:border-emerald-400 disabled:opacity-50"
+            >
+              <FileText className="h-4 w-4" /> PDF
+            </button>
+            <button
+              type="button"
+              onClick={() => void load()}
+              className="flex items-center gap-2 rounded-lg border border-zinc-600 bg-zinc-800 px-3 py-2 text-sm font-semibold hover:border-emerald-400"
+            >
+              <RefreshCw className="h-4 w-4" /> Atualizar
+            </button>
+          </div>
         }
       />
 
@@ -111,28 +181,58 @@ export function FinancialPage() {
               </div>
             </div>
 
-            <div className="mt-6 rounded-xl border border-zinc-800 bg-zinc-900/40 p-5">
-              <div className="mb-4 text-sm font-semibold text-zinc-300">
-                Receita por dia (últimos {byDay.length})
-              </div>
-              {byDay.length === 0 ? (
-                <p className="text-sm text-zinc-500">Sem dados ainda.</p>
-              ) : (
-                <div className="flex items-end gap-2" style={{ height: 140 }}>
-                  {byDay.map((d) => (
-                    <div key={d.day} className="flex flex-1 flex-col items-center gap-1">
-                      <div
-                        className="w-full rounded-t bg-emerald-500/70"
-                        style={{ height: `${(d.cents / maxDay) * 110}px` }}
-                        title={brl(d.cents)}
-                      />
-                      <div className="text-[10px] text-zinc-500">
-                        {d.day.slice(5)}
-                      </div>
-                    </div>
-                  ))}
+            <div className="mt-6 grid grid-cols-1 gap-6 lg:grid-cols-2">
+              <div className="rounded-xl border border-zinc-800 bg-zinc-900/40 p-5">
+                <div className="mb-4 text-sm font-semibold text-zinc-300">
+                  Evolução da receita (R$)
                 </div>
-              )}
+                {revenueChartData.length === 0 ? (
+                  <p className="text-sm text-zinc-500">Sem dados ainda.</p>
+                ) : (
+                  <ResponsiveContainer width="100%" height={180}>
+                    <BarChart data={revenueChartData}>
+                      <CartesianGrid strokeDasharray="3 3" stroke="#27272a" />
+                      <XAxis dataKey="dia" stroke="#71717a" fontSize={11} />
+                      <YAxis stroke="#71717a" fontSize={11} />
+                      <Tooltip
+                        contentStyle={{
+                          background: "#18181b",
+                          border: "1px solid #3f3f46",
+                          borderRadius: 8,
+                          fontSize: 12,
+                        }}
+                      />
+                      <Bar dataKey="valor" fill="#10b981" radius={[4, 4, 0, 0]} />
+                    </BarChart>
+                  </ResponsiveContainer>
+                )}
+              </div>
+
+              <div className="rounded-xl border border-zinc-800 bg-zinc-900/40 p-5">
+                <div className="mb-4 text-sm font-semibold text-zinc-300">
+                  Horários de pico (sessões por hora)
+                </div>
+                {peakChartData.length === 0 ? (
+                  <p className="text-sm text-zinc-500">Sem dados ainda.</p>
+                ) : (
+                  <ResponsiveContainer width="100%" height={180}>
+                    <BarChart data={peakChartData}>
+                      <CartesianGrid strokeDasharray="3 3" stroke="#27272a" />
+                      <XAxis dataKey="hora" stroke="#71717a" fontSize={11} />
+                      <YAxis stroke="#71717a" fontSize={11} allowDecimals={false} />
+                      <Tooltip
+                        contentStyle={{
+                          background: "#18181b",
+                          border: "1px solid #3f3f46",
+                          borderRadius: 8,
+                          fontSize: 12,
+                        }}
+                      />
+                      <Bar dataKey="sessões" fill="#38bdf8" radius={[4, 4, 0, 0]} />
+                    </BarChart>
+                  </ResponsiveContainer>
+                )}
+              </div>
             </div>
 
             <div className="mt-6">

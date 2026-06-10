@@ -1,5 +1,14 @@
 import { useCallback, useEffect, useState } from "react";
 import { RefreshCw } from "lucide-react";
+import {
+  Bar,
+  BarChart,
+  CartesianGrid,
+  ResponsiveContainer,
+  Tooltip,
+  XAxis,
+  YAxis,
+} from "recharts";
 import { AdminPageHeader } from "../AdminLayout";
 import {
   getMostPlayed,
@@ -57,7 +66,10 @@ export function UsagePage() {
     void load();
   }, [load]);
 
-  const maxPlat = Math.max(1, ...byPlatform.map((p) => p.launches));
+  const platformChartData = byPlatform.map((p) => ({
+    plataforma: p.platform,
+    lançamentos: p.launches,
+  }));
 
   return (
     <div>
@@ -93,25 +105,34 @@ export function UsagePage() {
                 <div className="mb-4 text-sm font-semibold text-zinc-300">
                   Uso por plataforma
                 </div>
-                {byPlatform.length === 0 ? (
+                {platformChartData.length === 0 ? (
                   <p className="text-sm text-zinc-500">Sem dados ainda.</p>
                 ) : (
-                  <div className="space-y-2">
-                    {byPlatform.map((p) => (
-                      <div key={p.platform} className="text-sm">
-                        <div className="mb-1 flex justify-between">
-                          <span className="text-zinc-300">{p.platform}</span>
-                          <span className="text-zinc-500">{p.launches}</span>
-                        </div>
-                        <div className="h-2 overflow-hidden rounded-full bg-zinc-800">
-                          <div
-                            className="h-full bg-emerald-500/70"
-                            style={{ width: `${(p.launches / maxPlat) * 100}%` }}
-                          />
-                        </div>
-                      </div>
-                    ))}
-                  </div>
+                  <ResponsiveContainer
+                    width="100%"
+                    height={Math.max(120, platformChartData.length * 32)}
+                  >
+                    <BarChart data={platformChartData} layout="vertical">
+                      <CartesianGrid strokeDasharray="3 3" stroke="#27272a" />
+                      <XAxis type="number" stroke="#71717a" fontSize={11} allowDecimals={false} />
+                      <YAxis
+                        type="category"
+                        dataKey="plataforma"
+                        stroke="#71717a"
+                        fontSize={10}
+                        width={120}
+                      />
+                      <Tooltip
+                        contentStyle={{
+                          background: "#18181b",
+                          border: "1px solid #3f3f46",
+                          borderRadius: 8,
+                          fontSize: 12,
+                        }}
+                      />
+                      <Bar dataKey="lançamentos" fill="#10b981" radius={[0, 4, 4, 0]} />
+                    </BarChart>
+                  </ResponsiveContainer>
                 )}
               </div>
 

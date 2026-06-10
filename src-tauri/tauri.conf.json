@@ -78,6 +78,7 @@
             "core:window:allow-current-monitor",
             "core:default",
             "sql:default",
+            "dialog:default",
             "fs:default",
             "fs:read-all",
             "fs:write-all",

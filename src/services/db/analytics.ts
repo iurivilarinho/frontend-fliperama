@@ -151,6 +151,16 @@ export async function getRecentPayments(limit = 20): Promise<PaymentRow[]> {
   );
 }
 
+export type PeakHour = { hour: string; count: number };
+
+export async function getPeakHours(): Promise<PeakHour[]> {
+  const rows = await select<{ hour: string; count: number }>(
+    "SELECT substr(started_at, 12, 2) AS hour, COUNT(*) AS count FROM usage_events " +
+      "GROUP BY hour ORDER BY hour ASC",
+  );
+  return rows.filter((r) => r.hour);
+}
+
 export type UsageRow = {
   id: number;
   platform_name: string;

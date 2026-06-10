@@ -9,6 +9,7 @@ import {
 import { launchSelectedGame } from "../../services/emulatorLauncher";
 import { usePlaySession } from "./session/PlaySessionContext";
 import { HyperspinWheel } from "./HyperspinWheel";
+import { recordGameLaunch } from "../../services/db/usage";
 
 type GamesPageLocationState = {
   platform: HyperspinPlatformTheme;
@@ -218,6 +219,11 @@ export function GamesPage() {
       });
 
       try {
+        void recordGameLaunch({
+          platformName: platform.name,
+          romName: game.name,
+        });
+
         const launchPromise = launchSelectedGame({
           platformName: platform.name,
           romName: game.name,

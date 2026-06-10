@@ -9,6 +9,8 @@ import {
 import { PricingPage } from "./pages/PricingPage";
 import { GamesUploadPage } from "./pages/GamesUploadPage";
 import { RomsPage } from "./pages/RomsPage";
+import { FinancialPage } from "./pages/FinancialPage";
+import { UsagePage } from "./pages/UsagePage";
 
 function AdminGate() {
   const { isAuthed } = useAdminAuth();
@@ -24,14 +26,8 @@ function AdminGate() {
         <Route path="precos" element={<PricingPage />} />
         <Route path="jogos" element={<GamesUploadPage />} />
         <Route path="rooms" element={<RomsPage />} />
-        <Route
-          path="financeiro"
-          element={<AdminPlaceholderPage title="Financeiro" />}
-        />
-        <Route
-          path="uso"
-          element={<AdminPlaceholderPage title="Controle de uso" />}
-        />
+        <Route path="financeiro" element={<FinancialPage />} />
+        <Route path="uso" element={<UsagePage />} />
         <Route path="saves" element={<AdminPlaceholderPage title="Saves" />} />
         <Route
           path="catalogo"

@@ -4,8 +4,8 @@ const MODULES = [
   { label: "Precificação", status: "Pronto", to: "/admin/precos" },
   { label: "Jogos / Upload", status: "Pronto", to: "/admin/jogos" },
   { label: "ROMs (biblioteca)", status: "Pronto", to: "/admin/rooms" },
-  { label: "Financeiro", status: "Em breve", to: "/admin/financeiro" },
-  { label: "Controle de uso", status: "Em breve", to: "/admin/uso" },
+  { label: "Financeiro", status: "Pronto", to: "/admin/financeiro" },
+  { label: "Controle de uso", status: "Pronto", to: "/admin/uso" },
   { label: "Saves", status: "Em breve", to: "/admin/saves" },
 ];
 

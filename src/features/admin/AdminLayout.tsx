@@ -16,7 +16,7 @@ const NAV = [
   { to: "/admin", label: "Visão geral", icon: LayoutDashboard, end: true },
   { to: "/admin/precos", label: "Precificação", icon: Tags },
   { to: "/admin/jogos", label: "Jogos / Upload", icon: Upload },
-  { to: "/admin/rooms", label: "Rooms", icon: DoorOpen },
+  { to: "/admin/rooms", label: "ROMs", icon: DoorOpen },
   { to: "/admin/financeiro", label: "Financeiro", icon: Banknote },
   { to: "/admin/uso", label: "Controle de uso", icon: Timer },
   { to: "/admin/saves", label: "Saves", icon: Save },

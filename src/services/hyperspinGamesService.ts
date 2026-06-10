@@ -1,6 +1,6 @@
 import { convertFileSrc } from "@tauri-apps/api/core";
 import { join } from "@tauri-apps/api/path";
-import { readDir, readTextFile } from "@tauri-apps/plugin-fs";
+import { exists, readDir, readTextFile } from "@tauri-apps/plugin-fs";
 import { loadRuntimeIniConfig } from "./iniConfig";
 import { getPlatformRuntimeConfig } from "./platformRuntimeConfig";
 
@@ -10,8 +10,11 @@ export type HyperspinGame = {
   manufacturer: string | null;
   year: string | null;
   genre: string | null;
+  romPath: string;
   wheelImagePath: string | null;
   wheelImageUrl: string | null;
+  backgroundImagePath: string | null;
+  backgroundImageUrl: string | null;
   videoPath: string | null;
   videoUrl: string | null;
 };
@@ -121,13 +124,25 @@ export async function listHyperspinGames(params: {
   const { platformName } = params;
 
   const runtimeConfig = await getPlatformRuntimeConfig(platformName);
+
+  // Plataforma sem emulador/ROMs no catálogo: aparece no menu mas não lista jogos.
+  if (!runtimeConfig) {
+    return [];
+  }
+
   const { databasePath, mediaBasePath } = await loadRuntimeIniConfig();
 
   const databaseXmlPath = await join(
     databasePath,
-    platformName,
-    `${platformName}.xml`,
+    runtimeConfig.databaseFolder,
+    `${runtimeConfig.databaseFolder}.xml`,
   );
+
+  // Plataforma sem banco de dados (XML ausente): aparece no menu mas não lista
+  // jogos, em vez de quebrar com erro.
+  if (!(await exists(databaseXmlPath))) {
+    return [];
+  }
 
   const xmlContent = await readTextFile(databaseXmlPath);
 
@@ -140,15 +155,23 @@ export async function listHyperspinGames(params: {
   }
 
   const wheelDir = await join(mediaBasePath, platformName, "Images", "Wheel");
+  const snapDir = await join(mediaBasePath, platformName, "Images", "Snap");
   const videoDir = await join(mediaBasePath, platformName, "Video");
 
   let wheelMap = new Map<string, string>();
+  let snapMap = new Map<string, string>();
   let videoMap = new Map<string, string>();
 
   try {
     wheelMap = await buildMediaMap(wheelDir, IMAGE_EXTENSIONS);
   } catch (error) {
     console.warn("Não foi possível ler a pasta Wheel:", wheelDir, error);
+  }
+
+  try {
+    snapMap = await buildMediaMap(snapDir, IMAGE_EXTENSIONS);
+  } catch (error) {
+    console.warn("Não foi possível ler a pasta Snap:", snapDir, error);
   }
 
   try {
@@ -159,7 +182,7 @@ export async function listHyperspinGames(params: {
 
   const romMap = await buildRomMap(
     runtimeConfig.romsDir,
-    runtimeConfig.acceptedRomExtensions,
+    runtimeConfig.romExtensions,
   );
 
   const gameElements = Array.from(document.getElementsByTagName("game"));
@@ -171,9 +194,9 @@ export async function listHyperspinGames(params: {
     if (!rawName) continue;
 
     const romKey = normalizeRomKey(rawName);
-    const romExists = romMap.has(romKey);
+    const romPath = romMap.get(romKey);
 
-    if (!romExists) {
+    if (!romPath) {
       continue;
     }
 
@@ -185,6 +208,7 @@ export async function listHyperspinGames(params: {
     const mediaKey = normalizeMediaKey(rawName);
 
     const wheelImagePath = wheelMap.get(mediaKey) ?? null;
+    const backgroundImagePath = snapMap.get(mediaKey) ?? null;
     const videoPath = videoMap.get(mediaKey) ?? null;
 
     games.push({
@@ -193,8 +217,13 @@ export async function listHyperspinGames(params: {
       manufacturer,
       year,
       genre,
+      romPath,
       wheelImagePath,
       wheelImageUrl: wheelImagePath ? convertFileSrc(wheelImagePath) : null,
+      backgroundImagePath,
+      backgroundImageUrl: backgroundImagePath
+        ? convertFileSrc(backgroundImagePath)
+        : null,
       videoPath,
       videoUrl: videoPath ? convertFileSrc(videoPath) : null,
     });

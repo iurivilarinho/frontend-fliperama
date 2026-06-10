@@ -8,6 +8,7 @@ import {
 } from "../../services/hyperspinGamesService";
 import { launchSelectedGame } from "../../services/emulatorLauncher";
 import { usePlaySession } from "./session/PlaySessionContext";
+import { HyperspinWheel } from "./HyperspinWheel";
 
 type GamesPageLocationState = {
   platform: HyperspinPlatformTheme;
@@ -40,6 +41,17 @@ function GameBackground({ game }: { game: HyperspinGame | null }) {
         loop
         playsInline
         controls={false}
+      />
+    );
+  }
+
+  if (game.backgroundImageUrl) {
+    return (
+      <img
+        src={game.backgroundImageUrl}
+        alt={game.description}
+        className="absolute inset-0 h-full w-full object-cover"
+        draggable={false}
       />
     );
   }
@@ -78,7 +90,6 @@ export function GamesPage() {
   );
   const [keyboardUnlockAt, setKeyboardUnlockAt] = useState(0);
 
-  const wheelContainerRef = useRef<HTMLDivElement | null>(null);
   const searchInputRef = useRef<HTMLInputElement | null>(null);
 
   useEffect(() => {
@@ -130,15 +141,20 @@ export function GamesPage() {
     );
   }, [filteredGames, selectedIndex]);
 
-  const visibleWheelItems = useMemo(() => {
-    return filteredGames
-      .map((game, index) => ({
-        game,
-        index,
-        offset: index - selectedIndex,
-      }))
-      .filter((item) => Math.abs(item.offset) <= 4);
-  }, [filteredGames, selectedIndex]);
+  const wheelItems = useMemo(
+    () =>
+      filteredGames.map((game) => ({
+        key: game.name,
+        label: game.description,
+        imageUrl: game.wheelImageUrl,
+      })),
+    [filteredGames],
+  );
+
+  const safeSelectedIndex =
+    filteredGames.length === 0
+      ? 0
+      : Math.min(selectedIndex, filteredGames.length - 1);
 
   const loadGames = useCallback(async () => {
     if (!platform) return;
@@ -205,6 +221,7 @@ export function GamesPage() {
         const launchPromise = launchSelectedGame({
           platformName: platform.name,
           romName: game.name,
+          romPath: game.romPath,
         });
 
         // O indicador fica até o jogo realmente iniciar (janela perde foco)
@@ -341,11 +358,16 @@ export function GamesPage() {
     <div className="relative h-screen w-screen overflow-hidden bg-black text-white">
       <GameBackground game={selectedGame} />
 
-      <div className="pointer-events-none absolute inset-0 from-black/30 via-transparent to-black/30" />
-      <div className="pointer-events-none absolute inset-0  from-black/55 via-transparent to-black/25" />
+      <div className="pointer-events-none absolute inset-0 bg-gradient-to-r from-black/85 via-black/30 to-black/70" />
+      <div className="pointer-events-none absolute inset-0 bg-gradient-to-t from-black/90 via-transparent to-black/40" />
 
-      <div className="absolute left-6 top-6 z-30 rounded-md bg-black/45 px-3 py-2 text-xs text-zinc-300 backdrop-blur-sm">
-        {platform.name} • Enter inicia • / filtra • Esc volta
+      <div className="absolute left-8 top-7 z-30 flex items-center gap-3">
+        <div className="rounded-xl border border-white/10 bg-black/50 px-4 py-2 text-sm font-bold uppercase tracking-widest text-white backdrop-blur-md">
+          {platform.name}
+        </div>
+        <div className="rounded-lg bg-black/40 px-3 py-2 text-[11px] text-zinc-300 backdrop-blur-sm">
+          Enter inicia • / filtra • Esc volta • Ctrl+M sai
+        </div>
       </div>
 
       {searchVisible ? (
@@ -382,89 +404,44 @@ export function GamesPage() {
             : "Nenhum jogo encontrado."}
         </div>
       ) : (
-        <div
-          ref={wheelContainerRef}
-          className="absolute left-[6%] top-1/2 z-30 flex w-[40%] -translate-y-1/2 flex-col items-start justify-center"
-        >
-          {visibleWheelItems.map(({ game, offset }) => {
-            const absOffset = Math.abs(offset);
-            const isSelected = offset === 0;
+        <>
+          <HyperspinWheel
+            items={wheelItems}
+            selectedIndex={safeSelectedIndex}
+            disabled={Boolean(launchingGameName)}
+            onSelect={(index) => {
+              if (index === safeSelectedIndex) {
+                const game = filteredGames[index];
+                if (game) void launchGame(game);
+              } else {
+                setSelectedIndex(index);
+              }
+            }}
+          />
 
-            const translateY = offset * 92;
-            const translateX =
-              offset === 0 ? 0 : offset < 0 ? absOffset * 14 : absOffset * 18;
-
-            const scale =
-              absOffset === 0
-                ? 1
-                : absOffset === 1
-                  ? 0.82
-                  : absOffset === 2
-                    ? 0.66
-                    : absOffset === 3
-                      ? 0.54
-                      : 0.42;
-
-            const opacity =
-              absOffset === 0
-                ? 1
-                : absOffset === 1
-                  ? 0.72
-                  : absOffset === 2
-                    ? 0.46
-                    : absOffset === 3
-                      ? 0.28
-                      : 0.16;
-
-            return (
-              <button
-                key={game.name}
-                type="button"
-                onClick={() => void launchGame(game)}
-                disabled={Boolean(launchingGameName)}
-                className="absolute left-0 origin-left text-left transition-all duration-200 ease-out disabled:cursor-wait"
-                style={{
-                  transform: `translate(${translateX}px, ${translateY}px) scale(${scale})`,
-                  opacity,
-                  zIndex: 100 - absOffset,
-                }}
-              >
-                <div className="flex items-center gap-3">
-                  {isSelected ? (
-                    <div className="h-10 w-1.5 rounded-full bg-white/90 shadow-[0_0_18px_rgba(255,255,255,0.45)]" />
-                  ) : (
-                    <div className="h-10 w-1.5 rounded-full bg-transparent" />
-                  )}
-
-                  <div className="min-w-0">
-                    <div
-                      className={[
-                        "truncate font-black uppercase tracking-wide transition-all",
-                        isSelected
-                          ? "text-5xl text-white drop-shadow-[0_0_20px_rgba(255,255,255,0.18)]"
-                          : absOffset === 1
-                            ? "text-3xl text-zinc-200"
-                            : absOffset === 2
-                              ? "text-2xl text-zinc-300"
-                              : "text-xl text-zinc-400",
-                      ].join(" ")}
+          {selectedGame ? (
+            <div className="pointer-events-none absolute bottom-10 left-8 z-30 max-w-[46%]">
+              <div className="truncate text-5xl font-black uppercase tracking-wide text-white drop-shadow-[0_2px_24px_rgba(0,0,0,0.8)]">
+                {selectedGame.description}
+              </div>
+              <div className="mt-3 flex flex-wrap items-center gap-2">
+                {[selectedGame.year, selectedGame.manufacturer, selectedGame.genre]
+                  .filter(Boolean)
+                  .map((info) => (
+                    <span
+                      key={info as string}
+                      className="rounded-full border border-white/10 bg-black/45 px-3 py-1 text-xs font-semibold text-zinc-200 backdrop-blur-sm"
                     >
-                      {game.description}
-                    </div>
-
-                    {isSelected ? (
-                      <div className="mt-2 text-sm text-zinc-300">
-                        {[game.year, game.manufacturer, game.genre]
-                          .filter(Boolean)
-                          .join(" • ") || game.name}
-                      </div>
-                    ) : null}
-                  </div>
-                </div>
-              </button>
-            );
-          })}
-        </div>
+                      {info}
+                    </span>
+                  ))}
+              </div>
+              <div className="mt-4 text-sm text-zinc-400">
+                {safeSelectedIndex + 1} / {filteredGames.length} jogos
+              </div>
+            </div>
+          ) : null}
+        </>
       )}
     </div>
   );

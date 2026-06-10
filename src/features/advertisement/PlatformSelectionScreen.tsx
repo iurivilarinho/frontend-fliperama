@@ -6,6 +6,7 @@ import {
   type HyperspinPlatformTheme,
 } from "../../services/hyperspinPlatformThemesService";
 import { HyperspinThemePreview } from "./HyperspinThemePreview";
+import { HyperspinWheel } from "./HyperspinWheel";
 
 type PlatformSelectionScreenProps = {
   visible?: boolean;
@@ -76,7 +77,6 @@ export function PlatformSelectionScreen({
   const [searchTerm, setSearchTerm] = useState("");
   const [searchVisible, setSearchVisible] = useState(false);
 
-  const wheelContainerRef = useRef<HTMLDivElement | null>(null);
   const searchInputRef = useRef<HTMLInputElement | null>(null);
 
   const filteredPlatforms = useMemo(() => {
@@ -100,15 +100,20 @@ export function PlatformSelectionScreen({
     );
   }, [filteredPlatforms, selectedIndex]);
 
-  const visibleWheelItems = useMemo(() => {
-    return filteredPlatforms
-      .map((platform, index) => ({
-        platform,
-        index,
-        offset: index - selectedIndex,
-      }))
-      .filter((item) => Math.abs(item.offset) <= 4);
-  }, [filteredPlatforms, selectedIndex]);
+  const wheelItems = useMemo(
+    () =>
+      filteredPlatforms.map((platform) => ({
+        key: platform.themeZipPath,
+        label: platform.name,
+        imageUrl: platform.wheelImageUrl,
+      })),
+    [filteredPlatforms],
+  );
+
+  const safeSelectedIndex =
+    filteredPlatforms.length === 0
+      ? 0
+      : Math.min(selectedIndex, filteredPlatforms.length - 1);
 
   const loadPlatforms = useCallback(async () => {
     setLoadingPlatforms(true);
@@ -242,11 +247,16 @@ export function PlatformSelectionScreen({
         <HyperspinThemePreview transparentBackground />
       </div>
 
-      <div className="pointer-events-none absolute inset-0  from-black/30 via-transparent to-black/30" />
-      <div className="pointer-events-none absolute inset-0  from-black/45 via-transparent to-black/20" />
+      <div className="pointer-events-none absolute inset-0 bg-gradient-to-r from-black/85 via-black/25 to-black/65" />
+      <div className="pointer-events-none absolute inset-0 bg-gradient-to-t from-black/85 via-transparent to-black/35" />
 
-      <div className="absolute left-6 top-6 z-30 rounded-md bg-black/45 px-3 py-2 text-xs text-zinc-300 backdrop-blur-sm">
-        Enter seleciona • / filtra • Esc limpa filtro • Ctrl+Shift+F encerra
+      <div className="absolute left-8 top-7 z-30 flex items-center gap-3">
+        <div className="rounded-xl border border-white/10 bg-black/50 px-4 py-2 text-sm font-bold uppercase tracking-widest text-white backdrop-blur-md">
+          Selecione a plataforma
+        </div>
+        <div className="rounded-lg bg-black/40 px-3 py-2 text-[11px] text-zinc-300 backdrop-blur-sm">
+          Enter seleciona • / filtra • Esc limpa • Ctrl+M sai
+        </div>
       </div>
 
       {searchVisible ? (
@@ -277,78 +287,31 @@ export function PlatformSelectionScreen({
             : "Nenhuma plataforma encontrada."}
         </div>
       ) : (
-        <div
-          ref={wheelContainerRef}
-          className="absolute left-[6%] top-1/2 z-30 flex w-[34%] -translate-y-1/2 flex-col items-start justify-center"
-        >
-          {visibleWheelItems.map(({ platform, offset }) => {
-            const absOffset = Math.abs(offset);
-            const isSelected = offset === 0;
+        <>
+          <HyperspinWheel
+            items={wheelItems}
+            selectedIndex={safeSelectedIndex}
+            onSelect={(index) => {
+              if (index === safeSelectedIndex) {
+                const platform = filteredPlatforms[index];
+                if (platform) void onSelectPlatform(platform);
+              } else {
+                setSelectedIndex(index);
+              }
+            }}
+          />
 
-            const translateY = offset * 92;
-            const translateX =
-              offset === 0 ? 0 : offset < 0 ? absOffset * 14 : absOffset * 18;
-
-            const scale =
-              absOffset === 0
-                ? 1
-                : absOffset === 1
-                  ? 0.82
-                  : absOffset === 2
-                    ? 0.66
-                    : absOffset === 3
-                      ? 0.54
-                      : 0.42;
-
-            const opacity =
-              absOffset === 0
-                ? 1
-                : absOffset === 1
-                  ? 0.72
-                  : absOffset === 2
-                    ? 0.46
-                    : absOffset === 3
-                      ? 0.28
-                      : 0.16;
-
-            return (
-              <button
-                key={platform.themeZipPath}
-                type="button"
-                onClick={() => void onSelectPlatform(platform)}
-                className="absolute left-0 origin-left text-left transition-all duration-200 ease-out"
-                style={{
-                  transform: `translate(${translateX}px, ${translateY}px) scale(${scale})`,
-                  opacity,
-                  zIndex: 100 - absOffset,
-                }}
-              >
-                <div className="flex items-center gap-3">
-                  {isSelected ? (
-                    <div className="h-9 w-1.5 rounded-full bg-white/90 shadow-[0_0_18px_rgba(255,255,255,0.45)]" />
-                  ) : (
-                    <div className="h-9 w-1.5 rounded-full bg-transparent" />
-                  )}
-
-                  <div
-                    className={[
-                      " truncate font-black uppercase tracking-wide transition-all",
-                      isSelected
-                        ? "text-5xl text-white drop-shadow-[0_0_20px_rgba(255,255,255,0.18)]"
-                        : absOffset === 1
-                          ? "text-3xl text-zinc-200"
-                          : absOffset === 2
-                            ? "text-2xl text-zinc-300"
-                            : "text-xl text-zinc-400",
-                    ].join(" ")}
-                  >
-                    {platform.name}
-                  </div>
-                </div>
-              </button>
-            );
-          })}
-        </div>
+          {selectedPlatform ? (
+            <div className="pointer-events-none absolute bottom-10 left-8 z-30 max-w-[46%]">
+              <div className="truncate text-6xl font-black uppercase tracking-wide text-white drop-shadow-[0_2px_24px_rgba(0,0,0,0.85)]">
+                {selectedPlatform.name}
+              </div>
+              <div className="mt-4 text-sm text-zinc-400">
+                {safeSelectedIndex + 1} / {filteredPlatforms.length} plataformas
+              </div>
+            </div>
+          ) : null}
+        </>
       )}
     </div>
   );

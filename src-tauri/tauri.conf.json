@@ -5,7 +5,7 @@
   "identifier": "com.lis.fliperama",
   "build": {
     "frontendDist": "../dist",
-    "devUrl": "http://localhost:5173",
+    "devUrl": "http://localhost:1420",
     "beforeDevCommand": "npm run dev",
     "beforeBuildCommand": "npm run build"
   },
@@ -48,6 +48,8 @@
           "$DESKTOP/**",
           "$APPDATA/**",
           "$APPLOCALDATA/**",
+          "C:/**",
+          "D:/**",
           "E:/**"
         ]
       },
@@ -88,6 +90,8 @@
                 "$DESKTOP/**",
                 "$APPDATA/**",
                 "$APPLOCALDATA/**",
+                "C:/**",
+                "D:/**",
                 "E:/**"
               ]
             }

@@ -77,6 +77,85 @@ fn launch_mame(mame_path: String, rom_name: String, roms_dir: String) -> Result<
     Ok(())
 }
 #[tauri::command]
+fn launch_generic(emulator_path: String, rom_path: String) -> Result<(), String> {
+    let emulator_exists = Path::new(&emulator_path).exists();
+    let rom_exists = Path::new(&rom_path).exists();
+
+    if !emulator_exists {
+        return Err(format!("Emulador não encontrado em: {}", emulator_path));
+    }
+
+    if !rom_exists {
+        return Err(format!("ROM não encontrada em: {}", rom_path));
+    }
+
+    let emulator_dir = Path::new(&emulator_path)
+        .parent()
+        .map(Path::to_path_buf)
+        .ok_or_else(|| {
+            format!(
+                "Não foi possível resolver a pasta do emulador: {}",
+                emulator_path
+            )
+        })?;
+
+    Command::new(&emulator_path)
+        .current_dir(&emulator_dir)
+        .arg(&rom_path)
+        .spawn()
+        .map_err(|e| {
+            format!(
+                "Falha ao executar emulador. emulator_path='{}', rom_path='{}', erro='{}'",
+                emulator_path, rom_path, e
+            )
+        })?;
+
+    Ok(())
+}
+
+#[tauri::command]
+fn launch_retroarch(
+    retroarch_path: String,
+    core_path: String,
+    rom_path: String,
+) -> Result<(), String> {
+    if !Path::new(&retroarch_path).exists() {
+        return Err(format!("RetroArch não encontrado em: {}", retroarch_path));
+    }
+    if !Path::new(&core_path).exists() {
+        return Err(format!("Core não encontrado em: {}", core_path));
+    }
+    if !Path::new(&rom_path).exists() {
+        return Err(format!("ROM não encontrada em: {}", rom_path));
+    }
+
+    let retroarch_dir = Path::new(&retroarch_path)
+        .parent()
+        .map(Path::to_path_buf)
+        .ok_or_else(|| {
+            format!(
+                "Não foi possível resolver a pasta do RetroArch: {}",
+                retroarch_path
+            )
+        })?;
+
+    Command::new(&retroarch_path)
+        .current_dir(&retroarch_dir)
+        .arg("-L")
+        .arg(&core_path)
+        .arg(&rom_path)
+        .spawn()
+        .map_err(|e| {
+            format!(
+                "Falha ao executar RetroArch. retroarch='{}', core='{}', rom='{}', erro='{}'",
+                retroarch_path, core_path, rom_path, e
+            )
+        })?;
+
+    Ok(())
+}
+
+#[tauri::command]
 fn save_foreground_window(state: State<'_, FocusState>) {
   let hwnd = unsafe { GetForegroundWindow() };
   if hwnd != 0 {
@@ -185,23 +264,26 @@ fn stop_running_overlays(app: AppHandle) -> Result<(), String> {
 fn stop_active_game() -> Result<(), String> {
     #[cfg(target_os = "windows")]
     {
-        let output = Command::new("taskkill")
-            .arg("/IM")
-            .arg("mame.exe")
-            .arg("/F")
-            .output()
-            .map_err(|e| format!("Falha ao executar taskkill: {}", e))?;
+        // Encerra qualquer emulador conhecido que possa estar rodando.
+        let emulators = [
+            "mame.exe",
+            "Project64.exe",
+            "nestopia.exe",
+            "zsnesw.exe",
+            "Fusion.exe",
+            "retroarch.exe",
+        ];
 
-        if output.status.success() {
-            return Ok(());
+        for emulator in emulators {
+            let _ = Command::new("taskkill")
+                .arg("/IM")
+                .arg(emulator)
+                .arg("/F")
+                .output()
+                .map_err(|e| format!("Falha ao executar taskkill: {}", e))?;
         }
 
-        let stderr = String::from_utf8_lossy(&output.stderr);
-        if stderr.contains("not found") || stderr.contains("nenhuma instância") || stderr.contains("não foi encontrado") {
-            return Ok(());
-        }
-
-        return Err(format!("Falha ao encerrar mame.exe: {}", stderr.trim()));
+        return Ok(());
     }
 
     #[cfg(not(target_os = "windows"))]
@@ -224,6 +306,8 @@ pub fn run() {
       close_overlay_mini_window,
       stop_running_overlays,
       launch_mame,
+      launch_generic,
+      launch_retroarch,
       stop_active_game,
       quit_app
     ])

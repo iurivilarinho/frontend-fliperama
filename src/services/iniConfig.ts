@@ -79,6 +79,7 @@ export type PlatformLaunchProfile = "mame";
 
 export type RuntimeIniConfig = {
   iniPath: string;
+  hyperspinBasePath: string;
   emulatorPath: string;
   romsDir: string;
   mediaBasePath: string;
@@ -87,6 +88,13 @@ export type RuntimeIniConfig = {
   acceptedRomExtensions: string[];
   launchProfile: PlatformLaunchProfile;
 };
+
+function getParentDirectory(path: string): string {
+  const normalized = path.replaceAll("\\", "/").replace(/\/+$/, "");
+  const index = normalized.lastIndexOf("/");
+  if (index <= 0) return normalized;
+  return normalized.slice(0, index).replaceAll("/", "\\");
+}
 
 export async function loadRuntimeIniConfig(): Promise<RuntimeIniConfig> {
   const { iniPath, ini } = await readIni();
@@ -98,6 +106,12 @@ export async function loadRuntimeIniConfig(): Promise<RuntimeIniConfig> {
   const themesBasePath = (ini.runtime?.themesBasePath ?? "").trim();
   const acceptedRomExtensions = parseList(ini.runtime?.acceptedRomExtensions);
   const rawLaunchProfile = (ini.runtime?.launchProfile ?? "").trim();
+
+  // hyperspinBasePath é a raiz da instalação do HyperSpin. Se não vier no ini,
+  // derivamos da pasta pai de databasePath (ex.: ...\HyperSpin\Databases -> ...\HyperSpin).
+  const hyperspinBasePath =
+    (ini.runtime?.hyperspinBasePath ?? "").trim() ||
+    (databasePath ? getParentDirectory(databasePath) : "");
 
   if (!emulatorPath) {
     throw new Error(
@@ -150,6 +164,7 @@ export async function loadRuntimeIniConfig(): Promise<RuntimeIniConfig> {
 
   return {
     iniPath,
+    hyperspinBasePath,
     emulatorPath,
     romsDir,
     mediaBasePath,

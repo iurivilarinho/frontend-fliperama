@@ -4,25 +4,53 @@ import { getPlatformRuntimeConfig } from "./platformRuntimeConfig";
 export async function launchSelectedGame(params: {
   platformName: string;
   romName: string;
+  romPath: string;
 }) {
   const runtimeConfig = await getPlatformRuntimeConfig(params.platformName);
 
-  if (runtimeConfig.launchProfile !== "mame") {
+  if (!runtimeConfig) {
     throw new Error(
-      `Perfil de execução não suportado para a plataforma: ${params.platformName}`,
+      `Plataforma sem emulador configurado: ${params.platformName}`,
     );
   }
 
   console.log("launchSelectedGame", {
     platformName: params.platformName,
+    launchProfile: runtimeConfig.launchProfile,
     emulatorPath: runtimeConfig.emulatorPath,
     romsDir: runtimeConfig.romsDir,
     romName: params.romName,
+    romPath: params.romPath,
   });
 
-  await invoke("launch_mame", {
-    mamePath: runtimeConfig.emulatorPath,
-    romName: params.romName,
-    romsDir: runtimeConfig.romsDir,
+  if (runtimeConfig.launchProfile === "mame") {
+    await invoke("launch_mame", {
+      mamePath: runtimeConfig.emulatorPath,
+      romName: params.romName,
+      romsDir: runtimeConfig.romsDir,
+    });
+    return;
+  }
+
+  if (runtimeConfig.launchProfile === "retroarch") {
+    if (!runtimeConfig.corePath) {
+      throw new Error(
+        `Core do RetroArch não configurado para: ${params.platformName}`,
+      );
+    }
+
+    await invoke("launch_retroarch", {
+      retroarchPath: runtimeConfig.emulatorPath,
+      corePath: runtimeConfig.corePath,
+      romPath: params.romPath,
+    });
+    return;
+  }
+
+  // Perfil genérico: emuladores que recebem o caminho da ROM como argumento
+  // (Project64, Nestopia, ZSNES, Kega Fusion, etc.).
+  await invoke("launch_generic", {
+    emulatorPath: runtimeConfig.emulatorPath,
+    romPath: params.romPath,
   });
 }

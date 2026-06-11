@@ -1,6 +1,6 @@
 import { convertFileSrc } from "@tauri-apps/api/core";
-import { join } from "@tauri-apps/api/path";
-import { exists, readDir } from "@tauri-apps/plugin-fs";
+import { join } from "./path";
+import { exists, readDir } from "./fs";
 import { loadRuntimeIniConfig } from "./iniConfig";
 
 export type HyperspinPlatformTheme = {

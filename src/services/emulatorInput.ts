@@ -1,11 +1,11 @@
-import { join } from "@tauri-apps/api/path";
+import { join } from "./path";
 import {
   copyFile,
   exists,
   mkdir,
   readTextFile,
   writeTextFile,
-} from "@tauri-apps/plugin-fs";
+} from "./fs";
 import { loadRuntimeIniConfig } from "./iniConfig";
 import type { InGameButton, InGameMapping } from "./gamepad";
 import { loadInGameMapping, loadNumPlayers } from "./db/controls";

@@ -514,6 +514,116 @@ fn admin_db_execute(db_path: &Path, body: &str) -> Result<String, String> {
   ))
 }
 
+/// Caminhos do host expostos ao admin remoto (banco + dirs base do app).
+struct HostPaths {
+  db_path: PathBuf,
+  app_config_dir: PathBuf,
+  app_local_data_dir: PathBuf,
+}
+
+// Ponte de filesystem para o admin remoto: espelha os usos do @tauri-apps/
+// plugin-fs (exists/readDir/readTextFile/writeTextFile/readFile/writeFile/
+// mkdir/copyFile/remove) e expõe os dirs base do app (/api/fs/dirs).
+fn admin_fs(op: &str, body: &str, paths: &HostPaths) -> Result<String, String> {
+  use base64::Engine;
+  use serde_json::{json, Value};
+
+  let v: Value = if body.trim().is_empty() {
+    Value::Null
+  } else {
+    serde_json::from_str(body).map_err(|e| e.to_string())?
+  };
+  let get_str = |k: &str| -> Result<String, String> {
+    v.get(k)
+      .and_then(|x| x.as_str())
+      .map(|s| s.to_string())
+      .ok_or_else(|| format!("campo '{}' ausente", k))
+  };
+  let get_bool = |k: &str| v.get(k).and_then(|x| x.as_bool()).unwrap_or(false);
+
+  match op {
+    "dirs" => Ok(json!({
+      "sep": std::path::MAIN_SEPARATOR.to_string(),
+      "appConfigDir": paths.app_config_dir.to_string_lossy(),
+      "appLocalDataDir": paths.app_local_data_dir.to_string_lossy(),
+    })
+    .to_string()),
+    "exists" => {
+      let p = get_str("path")?;
+      Ok(json!({ "exists": Path::new(&p).exists() }).to_string())
+    }
+    "readDir" => {
+      let p = get_str("path")?;
+      let mut entries: Vec<Value> = Vec::new();
+      for e in std::fs::read_dir(&p).map_err(|e| e.to_string())? {
+        let e = e.map_err(|e| e.to_string())?;
+        let ft = e.file_type().map_err(|e| e.to_string())?;
+        entries.push(json!({
+          "name": e.file_name().to_string_lossy(),
+          "isDirectory": ft.is_dir(),
+          "isFile": ft.is_file(),
+          "isSymlink": ft.is_symlink(),
+        }));
+      }
+      Ok(json!({ "entries": entries }).to_string())
+    }
+    "readTextFile" => {
+      let p = get_str("path")?;
+      let content = std::fs::read_to_string(&p).map_err(|e| e.to_string())?;
+      Ok(json!({ "content": content }).to_string())
+    }
+    "writeTextFile" => {
+      let p = get_str("path")?;
+      std::fs::write(&p, get_str("content")?).map_err(|e| e.to_string())?;
+      Ok("{\"ok\":true}".to_string())
+    }
+    "readFile" => {
+      let p = get_str("path")?;
+      let bytes = std::fs::read(&p).map_err(|e| e.to_string())?;
+      let b64 = base64::engine::general_purpose::STANDARD.encode(bytes);
+      Ok(json!({ "base64": b64 }).to_string())
+    }
+    "writeFile" => {
+      let p = get_str("path")?;
+      let bytes = base64::engine::general_purpose::STANDARD
+        .decode(get_str("base64")?.as_bytes())
+        .map_err(|e| e.to_string())?;
+      std::fs::write(&p, bytes).map_err(|e| e.to_string())?;
+      Ok("{\"ok\":true}".to_string())
+    }
+    "mkdir" => {
+      let p = get_str("path")?;
+      if get_bool("recursive") {
+        std::fs::create_dir_all(&p)
+      } else {
+        std::fs::create_dir(&p)
+      }
+      .map_err(|e| e.to_string())?;
+      Ok("{\"ok\":true}".to_string())
+    }
+    "copyFile" => {
+      std::fs::copy(get_str("from")?, get_str("to")?).map_err(|e| e.to_string())?;
+      Ok("{\"ok\":true}".to_string())
+    }
+    "remove" => {
+      let p = get_str("path")?;
+      let path = Path::new(&p);
+      if path.is_dir() {
+        if get_bool("recursive") {
+          std::fs::remove_dir_all(path)
+        } else {
+          std::fs::remove_dir(path)
+        }
+      } else {
+        std::fs::remove_file(path)
+      }
+      .map_err(|e| e.to_string())?;
+      Ok("{\"ok\":true}".to_string())
+    }
+    _ => Err("rota fs desconhecida".to_string()),
+  }
+}
+
 // Localiza a pasta `dist` (frontend buildado) para servir o painel pela rede.
 fn frontend_root() -> Option<PathBuf> {
   let exe = std::env::current_exe().ok()?;
@@ -572,7 +682,7 @@ fn serve_frontend(url: &str, root: &Path) -> Option<(Vec<u8>, &'static str)> {
     .map(|b| (b, "text/html; charset=utf-8"))
 }
 
-fn start_remote_admin_server(db_path: PathBuf) {
+fn start_remote_admin_server(paths: HostPaths) {
   std::thread::spawn(move || {
     let server = match tiny_http::Server::http("0.0.0.0:8787") {
       Ok(s) => s,
@@ -606,14 +716,19 @@ fn start_remote_admin_server(db_path: PathBuf) {
         continue;
       }
 
-      // API (POST /api/db/*).
+      // API (POST /api/db/* e /api/fs/*).
       if url.starts_with("/api/") {
         let mut body = String::new();
         let _ = request.as_reader().read_to_string(&mut body);
-        let result = match url.as_str() {
-          "/api/db/select" => admin_db_select(&db_path, &body),
-          "/api/db/execute" => admin_db_execute(&db_path, &body),
-          _ => Err("rota desconhecida".to_string()),
+        let path_only = url.split('?').next().unwrap_or(&url);
+        let result = if let Some(op) = path_only.strip_prefix("/api/fs/") {
+          admin_fs(op, &body, &paths)
+        } else {
+          match path_only {
+            "/api/db/select" => admin_db_select(&paths.db_path, &body),
+            "/api/db/execute" => admin_db_execute(&paths.db_path, &body),
+            _ => Err("rota desconhecida".to_string()),
+          }
         };
         let (code, json) = match result {
           Ok(j) => (200u16, j),
@@ -744,8 +859,15 @@ let _tray = TrayIconBuilder::new()
       }
 
       // Servidor HTTP para acesso remoto ao painel admin (mesma rede).
-      if let Ok(cfg_dir) = app.path().app_config_dir() {
-        start_remote_admin_server(cfg_dir.join("fliperama.db"));
+      if let (Ok(cfg_dir), Ok(local_dir)) = (
+        app.path().app_config_dir(),
+        app.path().app_local_data_dir(),
+      ) {
+        start_remote_admin_server(HostPaths {
+          db_path: cfg_dir.join("fliperama.db"),
+          app_config_dir: cfg_dir,
+          app_local_data_dir: local_dir,
+        });
       }
 
       Ok(())

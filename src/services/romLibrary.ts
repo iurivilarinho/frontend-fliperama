@@ -1,5 +1,5 @@
-import { join } from "@tauri-apps/api/path";
-import { exists, readDir, readTextFile } from "@tauri-apps/plugin-fs";
+import { join } from "./path";
+import { exists, readDir, readTextFile } from "./fs";
 import { loadRuntimeIniConfig } from "./iniConfig";
 import {
   listCatalogPlatformNames,

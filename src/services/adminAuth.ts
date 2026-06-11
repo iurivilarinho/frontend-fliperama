@@ -1,5 +1,5 @@
-import { join } from "@tauri-apps/api/path";
-import { exists, remove } from "@tauri-apps/plugin-fs";
+import { join } from "./path";
+import { exists, remove } from "./fs";
 import { getRuntimeConfigValue } from "./runtimeConfig";
 import { clearAdminPassword } from "./db/settings";
 

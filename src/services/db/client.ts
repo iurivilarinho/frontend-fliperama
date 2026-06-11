@@ -1,19 +1,11 @@
 import Database from "@tauri-apps/plugin-sql";
+import { apiBase, isTauri } from "../remoteHost";
 
 const DB_URL = "sqlite:fliperama.db";
 
-// Porta do servidor HTTP embarcado (Rust) para acesso remoto ao admin pela rede.
-const REMOTE_API_PORT = 8787;
-
 // No app (Tauri) usamos o plugin SQL local. Num navegador remoto (outra máquina
 // na rede acessando o painel via web) não há runtime Tauri — então roteamos as
-// queries para o servidor HTTP embarcado no host.
-const isTauri =
-  typeof window !== "undefined" && "__TAURI_INTERNALS__" in window;
-
-function apiBase(): string {
-  return `http://${window.location.hostname}:${REMOTE_API_PORT}`;
-}
+// queries para o servidor HTTP embarcado no host (ver ../remoteHost).
 
 let dbPromise: Promise<Database> | null = null;
 

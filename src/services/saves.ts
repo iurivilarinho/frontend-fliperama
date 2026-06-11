@@ -1,10 +1,10 @@
-import { appLocalDataDir, join } from "@tauri-apps/api/path";
+import { appLocalDataDir, join } from "./path";
 import {
   copyFile,
   exists,
   mkdir,
   readDir,
-} from "@tauri-apps/plugin-fs";
+} from "./fs";
 import { loadRuntimeIniConfig } from "./iniConfig";
 import { execute, select } from "./db/client";
 

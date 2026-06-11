@@ -1,5 +1,5 @@
-import { appConfigDir, join } from "@tauri-apps/api/path";
-import { exists, readTextFile, remove } from "@tauri-apps/plugin-fs";
+import { appConfigDir, join } from "./path";
+import { exists, readTextFile, remove } from "./fs";
 import { getSetting, setSetting } from "./db/settings";
 
 /**

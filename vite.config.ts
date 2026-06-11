@@ -29,6 +29,7 @@ export default defineConfig({
         "src/services/payment/types.ts",
         "src/services/sha256.ts",
         "src/services/xinputMapping.ts",
+        "src/services/pathUtils.ts",
       ],
       thresholds: {
         lines: 80,

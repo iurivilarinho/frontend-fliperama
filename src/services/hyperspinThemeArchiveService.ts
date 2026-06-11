@@ -1,11 +1,11 @@
-import { appLocalDataDir, join } from "@tauri-apps/api/path";
+import { appLocalDataDir, join } from "./path";
 import {
   exists,
   mkdir,
   readFile,
   readTextFile,
   writeFile,
-} from "@tauri-apps/plugin-fs";
+} from "./fs";
 import JSZip from "jszip";
 
 function normalizeSlashes(value: string): string {

@@ -1,6 +1,6 @@
 import { convertFileSrc } from "@tauri-apps/api/core";
-import { join } from "@tauri-apps/api/path";
-import { exists, readDir, readTextFile } from "@tauri-apps/plugin-fs";
+import { join } from "./path";
+import { exists, readDir, readTextFile } from "./fs";
 import { loadRuntimeIniConfig } from "./iniConfig";
 import { getPlatformRuntimeConfig } from "./platformRuntimeConfig";
 import { getShowWithoutRoms } from "./db/settings";

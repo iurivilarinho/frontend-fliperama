@@ -30,6 +30,7 @@ tauri-plugin-sql = { version = "2", features = ["sqlite"] }
 # Servidor HTTP embarcado para acesso remoto ao painel admin pela rede.
 tiny_http = "0.12"
 rusqlite = { version = "0.31", features = ["bundled"] }
+base64 = "0.22"
 
 windows-sys = { version = "0.52", features = [
   "Win32_Foundation",

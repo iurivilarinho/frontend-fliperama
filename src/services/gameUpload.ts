@@ -1,5 +1,5 @@
-import { basename, join } from "@tauri-apps/api/path";
-import { copyFile, exists, mkdir, readDir } from "@tauri-apps/plugin-fs";
+import { basename, join } from "./path";
+import { copyFile, exists, mkdir, readDir } from "./fs";
 import { registerUploadedGame } from "./db/platformConfig";
 import type { ManageablePlatform } from "./platforms";
 import { getExtension, isExtensionAllowed, removeExtension } from "./uploadRules";

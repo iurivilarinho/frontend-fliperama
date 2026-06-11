@@ -1,6 +1,6 @@
 import { convertFileSrc } from "@tauri-apps/api/core";
-import { dirname, join } from "@tauri-apps/api/path";
-import { exists, readTextFile } from "@tauri-apps/plugin-fs";
+import { dirname, join } from "./path";
+import { exists, readTextFile } from "./fs";
 import type {
   HyperspinLayerType,
   HyperspinTheme,

@@ -4,6 +4,7 @@ import {
   DoorOpen,
   Gamepad2,
   LayoutDashboard,
+  Library,
   LogOut,
   Save,
   Tags,
@@ -20,7 +21,8 @@ const NAV = [
   { to: "/admin/financeiro", label: "Financeiro", icon: Banknote },
   { to: "/admin/uso", label: "Controle de uso", icon: Timer },
   { to: "/admin/saves", label: "Saves", icon: Save },
-  { to: "/admin/catalogo", label: "Catálogo", icon: Gamepad2 },
+  { to: "/admin/controles", label: "Controles", icon: Gamepad2 },
+  { to: "/admin/catalogo", label: "Catálogo", icon: Library },
 ];
 
 export function AdminLayout() {

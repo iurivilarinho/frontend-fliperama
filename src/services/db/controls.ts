@@ -54,3 +54,17 @@ export async function loadNumPlayers(): Promise<number> {
 export async function saveNumPlayers(n: number): Promise<void> {
   await setSetting(NUM_PLAYERS_KEY, String(Math.min(4, Math.max(1, n))));
 }
+
+const PRESET_KEY = "controls_preset";
+
+export async function loadSelectedPreset(): Promise<string> {
+  try {
+    return (await getSetting(PRESET_KEY)) ?? "";
+  } catch {
+    return "";
+  }
+}
+
+export async function saveSelectedPreset(id: string): Promise<void> {
+  await setSetting(PRESET_KEY, id);
+}

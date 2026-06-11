@@ -19,9 +19,11 @@ import {
   loadControlMapping,
   loadInGameMapping,
   loadNumPlayers,
+  loadSelectedPreset,
   saveControlMapping,
   saveInGameMapping,
   saveNumPlayers,
+  saveSelectedPreset,
 } from "../../../services/db/controls";
 import {
   applyInGameMapping,
@@ -35,6 +37,8 @@ export function ControlsPage() {
   const [ingame, setIngame] = useState<InGameMapping>(DEFAULT_INGAME_MAPPING);
   const [binding, setBinding] = useState<string | null>(null); // "nav:up" | "ingame:south"
   const [numPlayers, setNumPlayers] = useState(1);
+  const [selectedPreset, setSelectedPreset] = useState("");
+  const [presetMsg, setPresetMsg] = useState<string | null>(null);
   const [applying, setApplying] = useState(false);
   const [applyResult, setApplyResult] = useState<ApplyResult | null>(null);
 
@@ -50,6 +54,7 @@ export function ControlsPage() {
     void loadControlMapping().then(setNav);
     void loadInGameMapping().then(setIngame);
     void loadNumPlayers().then(setNumPlayers);
+    void loadSelectedPreset().then(setSelectedPreset);
   }, []);
 
   const applyPreset = useCallback(
@@ -58,8 +63,12 @@ export function ControlsPage() {
       if (!preset) return;
       setNav(preset.nav);
       setIngame(preset.ingame);
+      setSelectedPreset(presetId);
+      setPresetMsg(`Preset "${preset.label}" aplicado.`);
+      window.setTimeout(() => setPresetMsg(null), 2500);
       await saveControlMapping(preset.nav);
       await saveInGameMapping(preset.ingame);
+      await saveSelectedPreset(presetId);
       window.dispatchEvent(new Event("controls-updated"));
     },
     [],
@@ -207,29 +216,56 @@ export function ControlsPage() {
 
         {/* presets */}
         <div>
-          <h2 className="mb-2 text-sm font-bold uppercase tracking-wide text-zinc-300">
-            Presets
-          </h2>
-          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-4">
-            {CONTROL_PRESETS.map((p) => (
-              <button
-                key={p.id}
-                type="button"
-                onClick={() => void applyPreset(p.id)}
-                className="group rounded-xl border border-zinc-700 bg-zinc-900/40 p-4 text-left transition hover:border-emerald-400 hover:bg-zinc-900/70"
-              >
-                <div className="mb-3 flex h-24 items-center justify-center">
-                  <GamepadVisual
-                    pressed={new Set<number>()}
-                    variant={p.id as GamepadVariant}
-                    className="max-h-24 w-auto opacity-80 transition group-hover:opacity-100"
-                  />
-                </div>
-                <div className="font-semibold">{p.label}</div>
-                <div className="mt-1 text-xs text-zinc-500">{p.description}</div>
-              </button>
-            ))}
+          <div className="mb-2 flex items-center gap-3">
+            <h2 className="text-sm font-bold uppercase tracking-wide text-zinc-300">
+              Presets
+            </h2>
+            {presetMsg ? (
+              <span className="rounded-full bg-emerald-500/15 px-3 py-0.5 text-xs font-semibold text-emerald-300">
+                {presetMsg}
+              </span>
+            ) : null}
           </div>
+          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-4">
+            {CONTROL_PRESETS.map((p) => {
+              const active = selectedPreset === p.id;
+              return (
+                <button
+                  key={p.id}
+                  type="button"
+                  onClick={() => void applyPreset(p.id)}
+                  className={[
+                    "group relative rounded-xl border p-4 text-left transition",
+                    active
+                      ? "border-emerald-400 bg-emerald-500/10 shadow-[0_0_24px_rgba(16,185,129,0.18)]"
+                      : "border-zinc-700 bg-zinc-900/40 hover:border-emerald-400/60 hover:bg-zinc-900/70",
+                  ].join(" ")}
+                >
+                  {active ? (
+                    <span className="absolute right-3 top-3 rounded-full bg-emerald-500 px-2 py-0.5 text-[10px] font-bold text-zinc-950">
+                      ✓ SELECIONADO
+                    </span>
+                  ) : null}
+                  <div className="mb-3 flex h-24 items-center justify-center">
+                    <GamepadVisual
+                      pressed={new Set<number>()}
+                      variant={p.id as GamepadVariant}
+                      className={[
+                        "max-h-24 w-auto transition",
+                        active ? "opacity-100" : "opacity-70 group-hover:opacity-100",
+                      ].join(" ")}
+                    />
+                  </div>
+                  <div className="font-semibold">{p.label}</div>
+                  <div className="mt-1 text-xs text-zinc-500">{p.description}</div>
+                </button>
+              );
+            })}
+          </div>
+          <p className="mt-2 text-xs text-zinc-500">
+            PC, Xbox e PlayStation usam o mesmo layout padrão (a API normaliza os
+            índices) — muda o rótulo/desenho, não os números. O Fliperama difere.
+          </p>
         </div>
 
         {/* navegação do totem */}

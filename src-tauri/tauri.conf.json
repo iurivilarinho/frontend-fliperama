@@ -1,6 +1,6 @@
 {
   "$schema": "../node_modules/@tauri-apps/cli/config.schema.json",
-  "productName": "LIS - Fliperama",
+  "productName": "Retro Nexus",
   "version": "0.1.0",
   "identifier": "com.lis.fliperama",
   "build": {

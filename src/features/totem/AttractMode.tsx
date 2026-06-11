@@ -72,9 +72,11 @@ export function AttractMode({ onExit }: { onExit: () => void }) {
         />
       ) : (
         <div className="flex flex-col items-center gap-6">
-          <div className="text-5xl font-black tracking-tight text-white">
-            FLIPERAMA
-          </div>
+          <img
+            src="/logo.png"
+            alt="Retro Nexus"
+            className="h-52 w-52 object-contain drop-shadow-[0_0_30px_rgba(129,140,248,0.4)]"
+          />
           <Spinner className="size-16" />
         </div>
       )}

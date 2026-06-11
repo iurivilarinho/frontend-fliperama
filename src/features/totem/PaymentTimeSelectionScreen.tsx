@@ -117,7 +117,7 @@ export function PaymentTimeSelectionScreen({
         const created = await createPixCharge({
           durationMinutes: minutes,
           amount,
-          description: `Fliperama - ${minutes} minutos`,
+          description: `Retro Nexus - ${minutes} minutos`,
         });
         setOrder(created);
         setWaiting(true);
@@ -243,6 +243,11 @@ export function PaymentTimeSelectionScreen({
       ) : null}
 
       <div className="z-10 w-full max-w-xl rounded-2xl border border-zinc-700/80 bg-zinc-900/70 p-8 text-center shadow-2xl backdrop-blur-sm">
+        <img
+          src="/logo.png"
+          alt="Retro Nexus"
+          className="mx-auto mb-4 h-24 w-24 object-contain drop-shadow-[0_0_24px_rgba(129,140,248,0.45)]"
+        />
         <h1 className="text-2xl font-bold">Pagamento</h1>
 
         {step === "choose" ? (

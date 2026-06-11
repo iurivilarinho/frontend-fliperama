@@ -62,6 +62,11 @@ export function AdminLoginPage() {
         onSubmit={handleSubmit}
         className="w-full max-w-sm rounded-2xl border border-zinc-800 bg-zinc-900/70 p-8 shadow-2xl"
       >
+        <img
+          src="/logo.png"
+          alt="Retro Nexus"
+          className="mx-auto mb-4 h-20 w-20 object-contain"
+        />
         <h1 className="text-xl font-bold">
           {firstRun ? "Definir senha do admin" : "Painel administrativo"}
         </h1>

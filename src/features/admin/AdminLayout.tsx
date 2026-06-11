@@ -36,11 +36,12 @@ export function AdminLayout() {
   return (
     <div className="flex h-screen w-screen overflow-hidden bg-zinc-950 text-zinc-100">
       <aside className="flex w-64 shrink-0 flex-col border-r border-zinc-800 bg-zinc-900">
-        <div className="px-5 py-5">
-          <div className="text-lg font-black tracking-tight">
-            LIS · Fliperama
+        <div className="flex items-center gap-3 px-5 py-5">
+          <img src="/logo.png" alt="Retro Nexus" className="h-10 w-10 rounded-lg object-contain" />
+          <div>
+            <div className="text-lg font-black tracking-tight">Retro Nexus</div>
+            <div className="text-xs text-zinc-500">Painel administrativo</div>
           </div>
-          <div className="text-xs text-zinc-500">Painel administrativo</div>
         </div>
 
         <nav className="flex-1 space-y-1 px-3">

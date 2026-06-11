@@ -89,7 +89,7 @@ export async function exportFinancialPdf(
 ): Promise<boolean> {
   const doc = new jsPDF();
   doc.setFontSize?.(16);
-  doc.text("Relatório Financeiro - LIS Fliperama", 14, 18);
+  doc.text("Relatório Financeiro - Retro Nexus", 14, 18);
   doc.setFontSize?.(10);
   doc.text(
     `Gerado em ${new Date().toLocaleString("pt-BR")}`,

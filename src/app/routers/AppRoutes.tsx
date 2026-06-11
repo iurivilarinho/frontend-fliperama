@@ -1,10 +1,10 @@
 import { useEffect } from "react";
 import { Route, Routes, useNavigate } from "react-router-dom";
 // import { ProtectedRoute } from "./ProtectedRoute";
-import { GamesPage } from "../../features/advertisement/GamesPage";
-import { PlatformSelectionPage } from "../../features/advertisement/PlatformSelectionPage";
+import { GamesPage } from "../../features/totem/GamesPage";
+import { PlatformSelectionPage } from "../../features/totem/PlatformSelectionPage";
 import { NotFound } from "../../features/shared/NotFound";
-import { SessionMiniOverlayPage } from "../../features/advertisement/session/SessionMiniOverlayPage";
+import { SessionMiniOverlayPage } from "../../features/totem/session/SessionMiniOverlayPage";
 import { AdminApp } from "../../features/admin/AdminApp";
 import { ROUTES } from "./routes";
 

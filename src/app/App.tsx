@@ -4,7 +4,7 @@ import { AppProvider } from "./provider/AppProvider";
 import { HyperspinThemeProvider } from "./provider/HyperspinThemeProvider";
 import { ThemeProvider } from "./provider/ThemeProviderContext";
 import { AppRoutes } from "./routers/AppRoutes";
-import { PlaySessionProvider } from "../features/advertisement/session/PlaySessionContext";
+import { PlaySessionProvider } from "../features/totem/session/PlaySessionContext";
 import { useGamepadNavigation } from "../hooks/useGamepadNavigation";
 import { applySavedInGameMapping } from "../services/emulatorInput";
 

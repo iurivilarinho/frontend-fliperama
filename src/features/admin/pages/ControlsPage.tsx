@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { Gamepad2, RefreshCw, Wrench } from "lucide-react";
 import { AdminPageHeader } from "../AdminLayout";
-import { GamepadVisual } from "../GamepadVisual";
+import { GamepadVisual, type GamepadVariant } from "../GamepadVisual";
 import {
   CONTROL_ACTIONS,
   CONTROL_PRESETS,
@@ -160,7 +160,7 @@ export function ControlsPage() {
             <div className="flex justify-center">
               <GamepadVisual
                 pressed={new Set(pressed)}
-                type={controllers[0]?.type ?? "generic"}
+                variant={controllers[0]?.type ?? "generic"}
               />
             </div>
             <div className="relative">
@@ -216,8 +216,15 @@ export function ControlsPage() {
                 key={p.id}
                 type="button"
                 onClick={() => void applyPreset(p.id)}
-                className="rounded-xl border border-zinc-700 bg-zinc-900/40 p-4 text-left transition hover:border-emerald-400"
+                className="group rounded-xl border border-zinc-700 bg-zinc-900/40 p-4 text-left transition hover:border-emerald-400 hover:bg-zinc-900/70"
               >
+                <div className="mb-3 flex h-24 items-center justify-center">
+                  <GamepadVisual
+                    pressed={new Set<number>()}
+                    variant={p.id as GamepadVariant}
+                    className="max-h-24 w-auto opacity-80 transition group-hover:opacity-100"
+                  />
+                </div>
                 <div className="font-semibold">{p.label}</div>
                 <div className="mt-1 text-xs text-zinc-500">{p.description}</div>
               </button>

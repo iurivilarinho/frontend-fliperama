@@ -151,6 +151,9 @@ export function HyperspinThemePreview({
   }
 
   if (renderableLayers.length === 0) {
+    // Tema vazio (ex.: plataformas adicionadas sem arte de tema): não mostra
+    // mensagem por cima da tela — fica transparente.
+    if (transparentBackground) return null;
     return (
       <div
         className={[

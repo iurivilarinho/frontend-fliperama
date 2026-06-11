@@ -89,22 +89,23 @@ async function applyToRetroArch(
   ours.set("video_windowed_fullscreen", "true");
   ours.set("pause_nonactive", "false");
 
-  // Teclado do jogador 1 (WASD + botões) — para quem joga no teclado.
+  // Teclado do jogador 1 — movimento WASD + botões em DIAMANTE (mesma geometria
+  // de um controle: cima/esq/baixo/dir = X/Y/B/A), para quem joga no teclado.
   const kb: Record<string, string> = {
     input_player1_up: "w",
     input_player1_down: "s",
     input_player1_left: "a",
     input_player1_right: "d",
-    input_player1_b: "space", // ação principal
-    input_player1_a: "l",
-    input_player1_y: "j",
-    input_player1_x: "k",
-    input_player1_l: "u",
-    input_player1_r: "o",
-    input_player1_l2: "i",
-    input_player1_r2: "p",
+    input_player1_x: "i", // cima
+    input_player1_y: "j", // esquerda
+    input_player1_b: "k", // baixo (ação principal)
+    input_player1_a: "l", // direita
+    input_player1_l: "u", // L1
+    input_player1_r: "o", // R1
+    input_player1_l2: "y", // L2
+    input_player1_r2: "p", // R2
     input_player1_start: "enter",
-    input_player1_select: "backspace",
+    input_player1_select: "rshift",
   };
   for (const [k, val] of Object.entries(kb)) ours.set(k, val);
 

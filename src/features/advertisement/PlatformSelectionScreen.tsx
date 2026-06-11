@@ -274,11 +274,8 @@ export function PlatformSelectionScreen({
       ) : null}
 
       {loadingPlatforms ? (
-        <div className="absolute inset-0 z-40 flex flex-col items-center justify-center gap-4 bg-zinc-950">
-          <Spinner className="size-12 text-emerald-400" />
-          <span className="text-sm font-medium text-zinc-400">
-            Carregando plataformas...
-          </span>
+        <div className="absolute inset-0 z-40 flex items-center justify-center bg-zinc-950">
+          <Spinner className="size-20" />
         </div>
       ) : platformsError ? (
         <div className="absolute inset-0 z-30 flex items-center justify-center px-6 text-center text-sm text-red-500">

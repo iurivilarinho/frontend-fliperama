@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useState } from "react";
 import { Plus, Trash2 } from "lucide-react";
 import { AdminPageHeader } from "../AdminLayout";
+import { Spinner } from "../../../components/spinner/Spinner";
 import {
   createTier,
   deleteTier,
@@ -109,7 +110,7 @@ export function PricingPage() {
 
         {error ? <p className="text-sm text-red-400">{error}</p> : null}
         {loading ? (
-          <p className="text-sm text-zinc-400">Carregando...</p>
+          <div className="flex justify-center py-10"><Spinner className="size-10" /></div>
         ) : tiers.length === 0 ? (
           <p className="text-sm text-zinc-400">Nenhuma faixa cadastrada.</p>
         ) : (

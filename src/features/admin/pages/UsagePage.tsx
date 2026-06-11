@@ -10,6 +10,7 @@ import {
   YAxis,
 } from "recharts";
 import { AdminPageHeader } from "../AdminLayout";
+import { Spinner } from "../../../components/spinner/Spinner";
 import {
   getMostPlayed,
   getRecentUsage,
@@ -90,7 +91,7 @@ export function UsagePage() {
       <div className="p-8">
         {error ? <p className="mb-4 text-sm text-red-400">{error}</p> : null}
         {loading || !sessions ? (
-          <p className="text-sm text-zinc-400">Carregando...</p>
+          <div className="flex justify-center py-10"><Spinner className="size-10" /></div>
         ) : (
           <>
             <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">

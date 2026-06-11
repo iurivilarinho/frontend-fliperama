@@ -2,6 +2,7 @@ import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useAdminAuth } from "./AdminAuthContext";
 import { RESET_FILENAME } from "../../services/adminAuth";
+import { Spinner } from "../../components/spinner/Spinner";
 
 export function AdminLoginPage() {
   const { login, setupPassword, passwordSet } = useAdminAuth();
@@ -49,8 +50,8 @@ export function AdminLoginPage() {
   // Enquanto verifica se já há senha cadastrada.
   if (passwordSet === null) {
     return (
-      <div className="flex h-screen w-screen items-center justify-center bg-zinc-950 text-sm text-zinc-500">
-        Carregando...
+      <div className="flex h-screen w-screen items-center justify-center bg-zinc-950">
+        <Spinner className="size-12" />
       </div>
     );
   }

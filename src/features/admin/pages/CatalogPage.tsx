@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useState } from "react";
 import { RefreshCw } from "lucide-react";
 import { AdminPageHeader } from "../AdminLayout";
+import { Spinner } from "../../../components/spinner/Spinner";
 import {
   listManageablePlatforms,
   type ManageablePlatform,
@@ -63,7 +64,7 @@ export function CatalogPage() {
       <div className="p-8">
         {error ? <p className="mb-4 text-sm text-red-400">{error}</p> : null}
         {loading ? (
-          <p className="text-sm text-zinc-400">Carregando...</p>
+          <div className="flex justify-center py-10"><Spinner className="size-10" /></div>
         ) : (
           <>
             <div className="mb-4 text-sm text-zinc-400">

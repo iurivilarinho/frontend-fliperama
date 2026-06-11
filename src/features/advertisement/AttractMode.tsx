@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { loadAttractItems, type AttractItem } from "../../services/attractService";
+import { Spinner } from "../../components/spinner/Spinner";
 
 const CYCLE_MS = 12000;
 
@@ -70,11 +71,11 @@ export function AttractMode({ onExit }: { onExit: () => void }) {
           className="h-full w-full object-contain"
         />
       ) : (
-        <div className="text-center">
+        <div className="flex flex-col items-center gap-6">
           <div className="text-5xl font-black tracking-tight text-white">
             FLIPERAMA
           </div>
-          <div className="mt-2 text-zinc-500">carregando...</div>
+          <Spinner className="size-16" />
         </div>
       )}
 

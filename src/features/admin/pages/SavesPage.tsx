@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useState } from "react";
 import { DatabaseBackup, RefreshCw } from "lucide-react";
 import { AdminPageHeader } from "../AdminLayout";
+import { Spinner } from "../../../components/spinner/Spinner";
 import {
   backupSaves,
   countBackups,
@@ -94,7 +95,7 @@ export function SavesPage() {
         ) : null}
 
         {loading ? (
-          <p className="text-sm text-zinc-400">Carregando...</p>
+          <div className="flex justify-center py-10"><Spinner className="size-10" /></div>
         ) : (
           <>
             <div className="grid grid-cols-2 gap-4 lg:grid-cols-3">

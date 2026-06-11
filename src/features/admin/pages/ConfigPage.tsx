@@ -14,6 +14,7 @@ import {
   setShowWithoutRoms,
 } from "../../../services/db/settings";
 import { applySavedInGameMapping } from "../../../services/emulatorInput";
+import { Spinner } from "../../../components/spinner/Spinner";
 import {
   getAllRuntimeConfig,
   migrateIniToDbIfNeeded,
@@ -227,7 +228,7 @@ export function ConfigPage() {
           </div>
 
           {loading ? (
-            <span className="text-sm text-zinc-500">Carregando...</span>
+            <Spinner className="size-5" />
           ) : (
             <div className="space-y-4">
               {FIELDS.map((field) => (
@@ -294,7 +295,7 @@ export function ConfigPage() {
             </div>
           </div>
           {loading ? (
-            <span className="text-sm text-zinc-500">...</span>
+            <Spinner className="size-5" />
           ) : (
             <Toggle
               checked={paymentEnabled}
@@ -315,7 +316,7 @@ export function ConfigPage() {
             </div>
           </div>
           {loading ? (
-            <span className="text-sm text-zinc-500">...</span>
+            <Spinner className="size-5" />
           ) : (
             <Toggle checked={crtShader} onChange={(v) => void toggleCrt(v)} />
           )}
@@ -332,7 +333,7 @@ export function ConfigPage() {
             </div>
           </div>
           {loading ? (
-            <span className="text-sm text-zinc-500">...</span>
+            <Spinner className="size-5" />
           ) : (
             <Toggle checked={bezel} onChange={(v) => void toggleBezel(v)} />
           )}
@@ -349,7 +350,7 @@ export function ConfigPage() {
             </div>
           </div>
           {loading ? (
-            <span className="text-sm text-zinc-500">...</span>
+            <Spinner className="size-5" />
           ) : (
             <Toggle checked={showWithoutRoms} onChange={(v) => void toggleShow(v)} />
           )}

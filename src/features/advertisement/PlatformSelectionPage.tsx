@@ -5,6 +5,10 @@ import { PlatformSelectionScreen } from "./PlatformSelectionScreen";
 import { HyperspinThemeProvider } from "../../app/provider/HyperspinThemeProvider";
 import { usePlaySession } from "./session/PlaySessionContext";
 import { PaymentTimeSelectionScreen } from "./PaymentTimeSelectionScreen";
+import { AttractMode } from "./AttractMode";
+import { useIdle } from "../../hooks/useIdle";
+
+const ATTRACT_IDLE_MS = 45000;
 
 export function PlatformSelectionPage() {
   const navigate = useNavigate();
@@ -20,6 +24,9 @@ export function PlatformSelectionPage() {
     if (status !== "expired") return;
     resetSession();
   }, [resetSession, status]);
+
+  // Modo atrair: após 45s ocioso na tela inicial, roda vídeos pra chamar cliente.
+  const [idle, resetIdle] = useIdle(ATTRACT_IDLE_MS, true);
 
   const handleSelectPlatform = useCallback(
     async (platform: HyperspinPlatformTheme) => {
@@ -42,6 +49,7 @@ export function PlatformSelectionPage() {
           onSelectDuration={startSession}
         />
       )}
+      {idle ? <AttractMode onExit={resetIdle} /> : null}
     </HyperspinThemeProvider>
   );
 }

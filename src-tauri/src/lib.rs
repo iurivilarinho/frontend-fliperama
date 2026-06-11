@@ -8,10 +8,15 @@ use tauri::tray::{TrayIconBuilder, TrayIconEvent};
 use windows_sys::Win32::Foundation::HWND;
 use windows_sys::Win32::System::Threading::{AttachThreadInput, GetCurrentThreadId};
 use windows_sys::Win32::UI::WindowsAndMessaging::{
-  GetForegroundWindow, GetWindowThreadProcessId, SetForegroundWindow,
+  FindWindowW, GetForegroundWindow, GetWindowThreadProcessId, SetForegroundWindow, SetWindowPos,
+  HWND_TOPMOST, SWP_NOACTIVATE, SWP_NOMOVE, SWP_NOSIZE, SWP_SHOWWINDOW,
 };
 
 struct FocusState(Mutex<HWND>);
+
+/// Flag do "pin" nativo do overlay: enquanto ligado, uma thread reafirma o
+/// overlay do timer como topmost (ver `start_overlay_pin`).
+struct OverlayPin(Arc<std::sync::atomic::AtomicBool>);
 
 /// Geração do timer de sessão. Cada agendamento incrementa o contador; a thread
 /// agendada só age se sua geração ainda for a atual (não foi cancelada/superada).
@@ -293,6 +298,58 @@ fn restore_foreground_window(state: State<'_, FocusState>) {
       SetForegroundWindow(hwnd);
     }
   }
+}
+
+/// Reafirma uma janela (pelo título) como topmost SEM ativá-la (SWP_NOACTIVATE),
+/// para o overlay do timer ficar visível por cima do emulador sem roubar o foco
+/// (o jogo continua recebendo input). Localiza por título via FindWindowW para
+/// não depender do tipo HWND do Tauri.
+#[cfg(target_os = "windows")]
+fn reassert_overlay_topmost() {
+  let title: Vec<u16> = "fliperama_overlay_mini"
+    .encode_utf16()
+    .chain(std::iter::once(0))
+    .collect();
+  let hwnd = unsafe { FindWindowW(std::ptr::null(), title.as_ptr()) };
+  if hwnd != 0 {
+    unsafe {
+      SetWindowPos(
+        hwnd,
+        HWND_TOPMOST,
+        0,
+        0,
+        0,
+        0,
+        SWP_NOMOVE | SWP_NOSIZE | SWP_NOACTIVATE | SWP_SHOWWINDOW,
+      );
+    }
+  }
+}
+
+/// Liga o "pin" nativo do overlay do timer: uma thread reafirma o topmost a cada
+/// 400ms enquanto a sessão estiver ativa. Imune ao estrangulamento de timers do
+/// webview em segundo plano (que fazia o timer sumir quando o jogo abria).
+#[tauri::command]
+fn start_overlay_pin(state: State<'_, OverlayPin>) {
+  use std::sync::atomic::Ordering;
+  // Já rodando? Não duplica a thread.
+  if state.0.swap(true, Ordering::SeqCst) {
+    return;
+  }
+  let flag = state.0.clone();
+  std::thread::spawn(move || {
+    while flag.load(Ordering::SeqCst) {
+      #[cfg(target_os = "windows")]
+      reassert_overlay_topmost();
+      std::thread::sleep(std::time::Duration::from_millis(400));
+    }
+  });
+}
+
+/// Desliga o "pin" nativo do overlay (encerra a thread).
+#[tauri::command]
+fn stop_overlay_pin(state: State<'_, OverlayPin>) {
+  state.0.store(false, std::sync::atomic::Ordering::SeqCst);
 }
 
 #[tauri::command]
@@ -777,12 +834,17 @@ pub fn run() {
     )
     .manage(FocusState(Mutex::new(0)))
     .manage(SessionTimer(Arc::new(AtomicU64::new(0))))
+    .manage(OverlayPin(Arc::new(std::sync::atomic::AtomicBool::new(
+      false,
+    ))))
     .invoke_handler(tauri::generate_handler![
       save_foreground_window,
       restore_foreground_window,
       ensure_overlay_window,
       ensure_overlay_mini_window,
       close_overlay_mini_window,
+      start_overlay_pin,
+      stop_overlay_pin,
       stop_running_overlays,
       launch_mame,
       launch_generic,

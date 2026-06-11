@@ -24,6 +24,7 @@
       },
       {
         "label": "overlay_mini",
+        "title": "fliperama_overlay_mini",
         "url": "/player-mini",
         "visible": false,
         "resizable": false,

@@ -268,8 +268,12 @@ export function PlaySessionProvider({ children }: { children: ReactNode }) {
     if (isMiniOverlayWindow) return;
     if (isSessionActive) {
       pinMiniOverlayWindow().catch(() => {});
+      // Pin nativo (Rust): mantém o timer por cima do emulador mesmo com o
+      // webview em segundo plano (timers do JS são estrangulados sem foco).
+      if (isTauri) void invoke("start_overlay_pin").catch(() => {});
       return;
     }
+    if (isTauri) void invoke("stop_overlay_pin").catch(() => {});
     closeMiniOverlayWindow().catch(() => {});
   }, [isMiniOverlayWindow, isSessionActive]);
 

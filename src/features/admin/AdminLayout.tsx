@@ -14,6 +14,7 @@ import {
   Upload,
 } from "lucide-react";
 import { useAdminAuth } from "./AdminAuthContext";
+import { isTauri } from "../../services/remoteHost";
 
 const NAV = [
   { to: "/admin", label: "Visão geral", icon: LayoutDashboard, end: true },
@@ -66,14 +67,18 @@ export function AdminLayout() {
         </nav>
 
         <div className="space-y-1 border-t border-zinc-800 p-3">
-          <button
-            type="button"
-            onClick={() => navigate("/")}
-            className="flex w-full items-center gap-3 rounded-lg px-3 py-2 text-sm text-zinc-400 hover:bg-zinc-800 hover:text-zinc-100"
-          >
-            <Gamepad2 className="h-4 w-4" />
-            Voltar ao totem
-          </button>
+          {/* "Voltar ao totem" só faz sentido no app (o totem roda no host).
+              No navegador remoto (admin via rede) escondemos. */}
+          {isTauri ? (
+            <button
+              type="button"
+              onClick={() => navigate("/")}
+              className="flex w-full items-center gap-3 rounded-lg px-3 py-2 text-sm text-zinc-400 hover:bg-zinc-800 hover:text-zinc-100"
+            >
+              <Gamepad2 className="h-4 w-4" />
+              Voltar ao totem
+            </button>
+          ) : null}
           <button
             type="button"
             onClick={() => {

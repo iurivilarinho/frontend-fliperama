@@ -52,12 +52,17 @@ export async function getMercadoPagoToken(): Promise<string> {
 
 // Migração única do .ini legado para o banco. Roda uma vez por sessão; se o
 // banco já tem config (ou não há .ini), não faz nada. Após migrar, apaga o .ini.
-let migrationDone = false;
+// Guardamos a PROMISE (não um boolean): assim chamadas concorrentes na inicialização
+// aguardam a MESMA migração terminar antes de ler a config — evita a corrida em que
+// alguém lê o banco ainda vazio e acha que nada está configurado.
+let migrationPromise: Promise<void> | null = null;
 
 export async function migrateIniToDbIfNeeded(): Promise<void> {
-  if (migrationDone) return;
-  migrationDone = true;
+  if (!migrationPromise) migrationPromise = runMigration();
+  return migrationPromise;
+}
 
+async function runMigration(): Promise<void> {
   try {
     // Se já houver caminho base no banco, consideramos configurado.
     if (await getSetting(PREFIX + "hyperspinBasePath")) return;

@@ -10,7 +10,7 @@ export function PlatformSelectionPage() {
   const navigate = useNavigate();
   const {
     durationOptionsMinutes,
-    isSessionActive,
+    canPlay,
     startSession,
     status,
     resetSession,
@@ -34,7 +34,7 @@ export function PlatformSelectionPage() {
 
   return (
     <HyperspinThemeProvider>
-      {isSessionActive ? (
+      {canPlay ? (
         <PlatformSelectionScreen onSelectPlatform={handleSelectPlatform} />
       ) : (
         <PaymentTimeSelectionScreen

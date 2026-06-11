@@ -86,7 +86,7 @@ export function GamesPage() {
   const location = useLocation();
   const state = (location.state as GamesPageLocationState | null) ?? null;
   const platform = state?.platform ?? null;
-  const { isSessionActive, status, resetSession } = usePlaySession();
+  const { canPlay, status, resetSession } = usePlaySession();
 
   const [games, setGames] = useState<HyperspinGame[]>([]);
   const [selectedIndex, setSelectedIndex] = useState(0);
@@ -394,7 +394,7 @@ export function GamesPage() {
     toggleFavorite,
   ]);
 
-  if (!isSessionActive) {
+  if (!canPlay) {
     return (
       <div className="flex h-screen w-screen items-center justify-center bg-zinc-950 text-white">
         <div className="text-center">

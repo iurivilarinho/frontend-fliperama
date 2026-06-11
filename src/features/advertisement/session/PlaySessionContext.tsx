@@ -26,6 +26,7 @@ import {
   markSessionStatus,
 } from "../../../services/db/sessions";
 import { backupSaves } from "../../../services/saves";
+import { getPaymentEnabled } from "../../../services/db/settings";
 
 const DEFAULT_MINUTES_OPTIONS = [5, 10, 15] as const;
 const SESSION_STORAGE_KEY = "arcade-play-session";
@@ -44,6 +45,10 @@ type PlaySessionContextValue = {
   startSession: (minutes: number, payment?: SessionPaymentInfo) => void;
   resetSession: () => void;
   isSessionActive: boolean;
+  /** Modo livre: pagamento desligado (pacote mensal) — máquina liberada. */
+  freeMode: boolean;
+  /** Pode jogar: sessão paga ativa OU modo livre. */
+  canPlay: boolean;
 };
 
 const PlaySessionContext = createContext<PlaySessionContextValue | null>(null);
@@ -108,7 +113,23 @@ export function PlaySessionProvider({ children }: { children: ReactNode }) {
   const expiresAtRef = useRef<number | null>(initial.expiresAtMs);
   const sessionIdRef = useRef<number | null>(initial.sessionId);
 
+  // Modo livre (pagamento desligado no admin). Recarrega quando muda no painel.
+  const [freeMode, setFreeMode] = useState(false);
+  useEffect(() => {
+    if (isMiniOverlayWindow) return;
+    const reload = () => {
+      getPaymentEnabled()
+        .then((enabled) => setFreeMode(!enabled))
+        .catch(() => {});
+    };
+    reload();
+    window.addEventListener("payment-config-updated", reload);
+    return () => window.removeEventListener("payment-config-updated", reload);
+  }, [isMiniOverlayWindow]);
+
   const isSessionActive = status === "active" && remainingSeconds > 0;
+  // No modo livre a máquina fica liberada (sem pagamento/tempo).
+  const canPlay = isSessionActive || freeMode;
 
   // Limpa no boot quaisquer sessões que ficaram "active" além do tempo.
   useEffect(() => {
@@ -275,8 +296,12 @@ export function PlaySessionProvider({ children }: { children: ReactNode }) {
       startSession,
       resetSession,
       isSessionActive,
+      freeMode,
+      canPlay,
     }),
     [
+      canPlay,
+      freeMode,
       isSessionActive,
       remainingSeconds,
       resetSession,

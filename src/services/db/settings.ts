@@ -62,3 +62,22 @@ export async function getShowWithoutRoms(): Promise<boolean> {
 export async function setShowWithoutRoms(value: boolean): Promise<void> {
   await setSetting(SHOW_WITHOUT_ROMS_KEY, value ? "true" : "false");
 }
+
+const PAYMENT_ENABLED_KEY = "payment_enabled";
+
+/**
+ * Se true (padrão), o totem cobra: mostra a tela de pagamento (PIX) e a sessão é
+ * por tempo. Se false (modo livre/pacote mensal), pula o pagamento e a máquina
+ * fica liberada para jogar sem tempo.
+ */
+export async function getPaymentEnabled(): Promise<boolean> {
+  try {
+    return (await getSetting(PAYMENT_ENABLED_KEY)) !== "false";
+  } catch {
+    return true;
+  }
+}
+
+export async function setPaymentEnabled(value: boolean): Promise<void> {
+  await setSetting(PAYMENT_ENABLED_KEY, value ? "true" : "false");
+}

@@ -3,8 +3,10 @@ import { open } from "@tauri-apps/plugin-dialog";
 import { FolderOpen, Save, HelpCircle } from "lucide-react";
 import { AdminPageHeader } from "../AdminLayout";
 import {
+  getPaymentEnabled,
   getShowWithoutRoms,
   setAdminPassword,
+  setPaymentEnabled,
   setShowWithoutRoms,
 } from "../../../services/db/settings";
 import {
@@ -122,6 +124,7 @@ const FIELDS: FieldDef[] = [
 
 export function ConfigPage() {
   const [showWithoutRoms, setShowState] = useState(false);
+  const [paymentEnabled, setPaymentState] = useState(true);
   const [loading, setLoading] = useState(true);
   const [pwd, setPwd] = useState("");
   const [pwdMsg, setPwdMsg] = useState<string | null>(null);
@@ -138,6 +141,7 @@ export function ConfigPage() {
       // Migra do .ini legado na primeira vez, para os campos já virem preenchidos.
       await migrateIniToDbIfNeeded();
       setShowState(await getShowWithoutRoms());
+      setPaymentState(await getPaymentEnabled());
       setCfg(await getAllRuntimeConfig());
     } finally {
       setLoading(false);
@@ -151,6 +155,13 @@ export function ConfigPage() {
   const toggleShow = async (v: boolean) => {
     setShowState(v);
     await setShowWithoutRoms(v);
+  };
+
+  const togglePayment = async (v: boolean) => {
+    setPaymentState(v);
+    await setPaymentEnabled(v);
+    // Aplica no totem sem precisar reiniciar.
+    window.dispatchEvent(new Event("payment-config-updated"));
   };
 
   const changePassword = async () => {
@@ -269,6 +280,28 @@ export function ConfigPage() {
                 ) : null}
               </div>
             </div>
+          )}
+        </div>
+
+        {/* Tela de pagamento / modo livre */}
+        <div className="flex items-center justify-between rounded-xl border border-zinc-800 bg-zinc-900/40 p-5">
+          <div>
+            <div className="flex items-center font-semibold">
+              Cobrança (tela de pagamento)
+              <HelpHint text="Ligado (padrão): o totem mostra a tela de pagamento PIX e a sessão é por tempo. Desligado (modo livre): pula o pagamento e a máquina fica liberada para jogar sem tempo — use quando o acesso for por pacote mensal, não por PIX." />
+            </div>
+            <div className="mt-1 max-w-xl text-sm text-zinc-400">
+              Desligue para o <span className="text-zinc-300">modo livre</span>{" "}
+              (pacote mensal): sem tela de pagamento, máquina liberada.
+            </div>
+          </div>
+          {loading ? (
+            <span className="text-sm text-zinc-500">...</span>
+          ) : (
+            <Toggle
+              checked={paymentEnabled}
+              onChange={(v) => void togglePayment(v)}
+            />
           )}
         </div>
 

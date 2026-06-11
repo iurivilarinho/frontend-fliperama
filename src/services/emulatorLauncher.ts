@@ -1,5 +1,6 @@
 import { invoke } from "@tauri-apps/api/core";
 import { getPlatformRuntimeConfig } from "./platformRuntimeConfig";
+import { resolveMameExe } from "./mameRoute";
 
 export async function launchSelectedGame(params: {
   platformName: string;
@@ -24,8 +25,13 @@ export async function launchSelectedGame(params: {
   });
 
   if (runtimeConfig.launchProfile === "mame") {
+    // Acervo misto: alguns jogos só rodam no MAME 0.142 (mame_legacy.exe).
+    const mamePath = await resolveMameExe(
+      runtimeConfig.emulatorPath,
+      params.romName,
+    );
     await invoke("launch_mame", {
-      mamePath: runtimeConfig.emulatorPath,
+      mamePath,
       romName: params.romName,
       romsDir: runtimeConfig.romsDir,
     });

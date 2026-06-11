@@ -27,6 +27,39 @@ const RA_BTNS: [string, InGameButton][] = [
   ["right", "right"],
 ];
 
+// O mapeamento in-game guarda índices da Gamepad API do navegador (o que a tela
+// "Vincular" enxerga). O RetroArch, porém, roda no driver XInput, cuja numeração
+// DIVERGE: Start/Select são 7/6 (não 9/8), os gatilhos L2/R2 são EIXOS (não
+// botões), e o d-pad é um HAT (h0), não os botões 12-15. Sem traduzir, Start,
+// Select, gatilhos e d-pad ficam errados no jogo. Esta função converte o índice
+// do navegador para o bind correto do XInput.
+function xinputBind(browserIdx: number): { suffix: "btn" | "axis"; value: string } {
+  switch (browserIdx) {
+    case 6:
+      return { suffix: "axis", value: "+2" }; // LT (gatilho esquerdo)
+    case 7:
+      return { suffix: "axis", value: "-2" }; // RT (gatilho direito)
+    case 8:
+      return { suffix: "btn", value: "6" }; // Back/Select
+    case 9:
+      return { suffix: "btn", value: "7" }; // Start
+    case 10:
+      return { suffix: "btn", value: "8" }; // L3
+    case 11:
+      return { suffix: "btn", value: "9" }; // R3
+    case 12:
+      return { suffix: "btn", value: "h0up" };
+    case 13:
+      return { suffix: "btn", value: "h0down" };
+    case 14:
+      return { suffix: "btn", value: "h0left" };
+    case 15:
+      return { suffix: "btn", value: "h0right" };
+    default:
+      return { suffix: "btn", value: String(browserIdx) }; // 0-5 coincidem
+  }
+}
+
 async function applyToRetroArch(
   base: string,
   m: InGameMapping,
@@ -44,7 +77,8 @@ async function applyToRetroArch(
   const ours = new Map<string, string>();
   for (let p = 1; p <= numPlayers; p++) {
     for (const [ra, btn] of RA_BTNS) {
-      ours.set(`input_player${p}_${ra}_btn`, String(m[btn]));
+      const bind = xinputBind(m[btn]);
+      ours.set(`input_player${p}_${ra}_${bind.suffix}`, bind.value);
     }
     // Cada jogador usa um controle: P1 = controle 0, P2 = controle 1, ...
     ours.set(`input_player${p}_joypad_index`, String(p - 1));
@@ -81,9 +115,15 @@ async function applyToRetroArch(
   ours.set("input_state_slot_decrease", "nul");
 
   const keys = new Set(ours.keys());
+  // Remove binds de controle ANTIGOS (botão/eixo) para não sobrar índice errado
+  // do esquema anterior conflitando com os novos (XInput).
+  const oldJoypadBind = /^input_player\d+_[a-z0-9]+_(btn|axis)$/;
   const kept = lines.filter((l) => {
     const k = l.split("=")[0]?.trim();
-    return l.trim() !== "" && (!k || !keys.has(k));
+    if (l.trim() === "") return false;
+    if (k && keys.has(k)) return false;
+    if (k && oldJoypadBind.test(k)) return false;
+    return true;
   });
 
   const appended = [...ours.entries()].map(([k, v]) => `${k} = "${v}"`);

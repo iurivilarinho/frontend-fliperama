@@ -12,6 +12,11 @@ export type HyperspinGame = {
   manufacturer: string | null;
   year: string | null;
   genre: string | null;
+  rating: string | null;
+  /** Arcade (MAME): nº de jogadores, botões e tipo de controle (via -listxml). */
+  players: number | null;
+  buttons: number | null;
+  control: string | null;
   romPath: string;
   hasRom: boolean;
   wheelImagePath: string | null;
@@ -129,6 +134,23 @@ async function buildRomMap(
   return romMap;
 }
 
+type MameMeta = {
+  players: number | null;
+  buttons: number | null;
+  control: string | null;
+};
+
+async function loadMameMeta(
+  metaPath: string,
+): Promise<Record<string, MameMeta>> {
+  try {
+    if (!(await exists(metaPath))) return {};
+    return JSON.parse(await readTextFile(metaPath)) as Record<string, MameMeta>;
+  } catch {
+    return {};
+  }
+}
+
 export async function listHyperspinGames(params: {
   platformName: string;
 }): Promise<HyperspinGame[]> {
@@ -156,6 +178,12 @@ export async function listHyperspinGames(params: {
   }
 
   const xmlContent = await readTextFile(databaseXmlPath);
+
+  // Metadata extra do arcade (players/buttons/control) gerada do MAME -listxml,
+  // se presente ao lado do XML. Enriquece a ficha do jogo (só arcade/MAME).
+  const mameMeta = await loadMameMeta(
+    await join(databasePath, runtimeConfig.databaseFolder, "_mame_meta.json"),
+  );
 
   const parser = new DOMParser();
   const document = parser.parseFromString(xmlContent, "application/xml");
@@ -223,6 +251,7 @@ export async function listHyperspinGames(params: {
     const manufacturer = getTextContent(gameElement, "manufacturer");
     const year = getTextContent(gameElement, "year");
     const genre = getTextContent(gameElement, "genre");
+    const rating = getTextContent(gameElement, "rating");
 
     const mediaKey = normalizeMediaKey(rawName);
 
@@ -236,6 +265,10 @@ export async function listHyperspinGames(params: {
       manufacturer,
       year,
       genre,
+      rating,
+      players: mameMeta[rawName]?.players ?? null,
+      buttons: mameMeta[rawName]?.buttons ?? null,
+      control: mameMeta[rawName]?.control ?? null,
       romPath,
       hasRom,
       wheelImagePath,
@@ -290,6 +323,10 @@ export async function listHyperspinGames(params: {
       manufacturer: null,
       year: null,
       genre: null,
+      rating: null,
+      players: null,
+      buttons: null,
+      control: null,
       romPath: fileExists ? row.file_path : "",
       hasRom: fileExists,
       wheelImagePath,

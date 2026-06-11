@@ -118,3 +118,54 @@ export async function getBezelEnabled(): Promise<boolean> {
 export async function setBezelEnabled(value: boolean): Promise<void> {
   await setSetting(BEZEL_KEY, value ? "true" : "false");
 }
+
+// ── RetroAchievements (cheevos do RetroArch) ─────────────────────────────────
+// Conta do operador. Vale para jogos abertos via RetroArch (consoles e arcade
+// pelo core FBNeo/MAME). O MAME standalone não suporta. As credenciais vão para
+// o retroarch.cfg (cheevos_*) em emulatorInput.ts.
+const RA_ENABLED_KEY = "ra_enabled";
+const RA_HARDCORE_KEY = "ra_hardcore";
+const RA_USERNAME_KEY = "ra_username";
+const RA_PASSWORD_KEY = "ra_password";
+
+export type RaConfig = {
+  enabled: boolean;
+  hardcore: boolean;
+  username: string;
+  password: string;
+};
+
+export async function getRaConfig(): Promise<RaConfig> {
+  try {
+    const [enabled, hardcore, username, password] = await Promise.all([
+      getSetting(RA_ENABLED_KEY),
+      getSetting(RA_HARDCORE_KEY),
+      getSetting(RA_USERNAME_KEY),
+      getSetting(RA_PASSWORD_KEY),
+    ]);
+    return {
+      enabled: enabled === "true",
+      hardcore: hardcore === "true",
+      username: username ?? "",
+      password: password ?? "",
+    };
+  } catch {
+    return { enabled: false, hardcore: false, username: "", password: "" };
+  }
+}
+
+export async function setRaEnabled(value: boolean): Promise<void> {
+  await setSetting(RA_ENABLED_KEY, value ? "true" : "false");
+}
+
+export async function setRaHardcore(value: boolean): Promise<void> {
+  await setSetting(RA_HARDCORE_KEY, value ? "true" : "false");
+}
+
+export async function setRaCredentials(
+  username: string,
+  password: string,
+): Promise<void> {
+  await setSetting(RA_USERNAME_KEY, username);
+  await setSetting(RA_PASSWORD_KEY, password);
+}

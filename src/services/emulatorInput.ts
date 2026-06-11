@@ -9,7 +9,11 @@ import {
 import { loadRuntimeIniConfig } from "./iniConfig";
 import type { InGameButton, InGameMapping } from "./gamepad";
 import { loadInGameMapping, loadNumPlayers } from "./db/controls";
-import { getBezelEnabled, getCrtShaderEnabled } from "./db/settings";
+import {
+  getBezelEnabled,
+  getCrtShaderEnabled,
+  getRaConfig,
+} from "./db/settings";
 import { xinputBind } from "./xinputMapping";
 
 // RetroArch: sufixo do RetroPad -> botão lógico do nosso mapeamento.
@@ -87,6 +91,22 @@ async function applyToRetroArch(
     ours.set("input_overlay_hide_in_menu", "false");
   } else {
     ours.set("input_overlay_enable", "false");
+  }
+
+  // RetroAchievements (cheevos): conta do operador. Liga as conquistas in-game
+  // do RetroArch para consoles e arcade via core. Senha em texto é como o
+  // próprio RetroArch armazena; ele troca por token no primeiro login.
+  const ra = await getRaConfig().catch(() => null);
+  if (ra && ra.enabled && ra.username) {
+    ours.set("cheevos_enable", "true");
+    ours.set("cheevos_username", ra.username);
+    ours.set("cheevos_password", ra.password);
+    ours.set("cheevos_hardcore_mode_enable", ra.hardcore ? "true" : "false");
+    ours.set("cheevos_richpresence_enable", "true");
+    ours.set("cheevos_challenge_indicators", "true");
+    ours.set("cheevos_unlock_sound_enable", "true");
+  } else {
+    ours.set("cheevos_enable", "false");
   }
 
   // Teclado do jogador 1 — movimento WASD + botões em DIAMANTE (mesma geometria

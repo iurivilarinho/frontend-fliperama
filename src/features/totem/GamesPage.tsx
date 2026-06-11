@@ -26,6 +26,44 @@ type GamesPageLocationState = {
   platform: HyperspinPlatformTheme;
 };
 
+// Traduz a classificação do MAME (ex.: "AAMA - Green (...)") num selo curto.
+function ratingBadge(
+  rating: string | null,
+): { label: string; cls: string } | null {
+  if (!rating) return null;
+  const r = rating.toLowerCase();
+  if (r.includes("green"))
+    return {
+      label: "Livre",
+      cls: "border-emerald-400/40 bg-emerald-500/15 text-emerald-200",
+    };
+  if (r.includes("yellow"))
+    return {
+      label: "12+",
+      cls: "border-amber-400/40 bg-amber-500/15 text-amber-200",
+    };
+  if (r.includes("red"))
+    return {
+      label: "18+",
+      cls: "border-red-400/40 bg-red-500/15 text-red-200",
+    };
+  return null;
+}
+
+// Tipo de controle do MAME -> rótulo curto em PT para a ficha.
+function controlLabel(control: string | null): string | null {
+  if (!control) return null;
+  if (control.startsWith("doublejoy")) return "2 direcionais";
+  if (control.startsWith("joy")) return "Direcional";
+  if (control === "stick") return "Analógico";
+  if (control === "lightgun") return "Pistola";
+  if (control === "trackball") return "Trackball";
+  if (control === "dial") return "Volante";
+  if (control === "paddle") return "Paddle";
+  if (control === "pedal") return "Pedal";
+  return null;
+}
+
 function GameBackground({ game }: { game: HyperspinGame | null }) {
   const videoRef = useRef<HTMLVideoElement | null>(null);
 
@@ -594,6 +632,16 @@ export function GamesPage() {
                 {selectedGame.description}
               </div>
               <div className="mt-3 flex flex-wrap items-center gap-2">
+                {(() => {
+                  const badge = ratingBadge(selectedGame.rating);
+                  return badge ? (
+                    <span
+                      className={`rounded-full border px-3 py-1 text-xs font-bold backdrop-blur-sm ${badge.cls}`}
+                    >
+                      {badge.label}
+                    </span>
+                  ) : null;
+                })()}
                 {[selectedGame.year, selectedGame.manufacturer, selectedGame.genre]
                   .filter(Boolean)
                   .map((info) => (
@@ -605,6 +653,25 @@ export function GamesPage() {
                     </span>
                   ))}
               </div>
+              {selectedGame.players || selectedGame.buttons ? (
+                <div className="mt-3 flex flex-wrap items-center gap-3 text-sm text-zinc-300">
+                  {selectedGame.players ? (
+                    <span>
+                      👤 {selectedGame.players}{" "}
+                      {selectedGame.players > 1 ? "jogadores" : "jogador"}
+                    </span>
+                  ) : null}
+                  {selectedGame.buttons ? (
+                    <span>
+                      🎮 {selectedGame.buttons}{" "}
+                      {selectedGame.buttons > 1 ? "botões" : "botão"}
+                    </span>
+                  ) : null}
+                  {controlLabel(selectedGame.control) ? (
+                    <span>🕹️ {controlLabel(selectedGame.control)}</span>
+                  ) : null}
+                </div>
+              ) : null}
               <div className="mt-4 text-sm text-zinc-400">
                 {safeSelectedIndex + 1} / {filteredGames.length} jogos
               </div>

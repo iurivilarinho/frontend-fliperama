@@ -6,11 +6,15 @@ import {
   getBezelEnabled,
   getCrtShaderEnabled,
   getPaymentEnabled,
+  getRaConfig,
   getShowWithoutRoms,
   setAdminPassword,
   setBezelEnabled,
   setCrtShaderEnabled,
   setPaymentEnabled,
+  setRaCredentials,
+  setRaEnabled,
+  setRaHardcore,
   setShowWithoutRoms,
 } from "../../../services/db/settings";
 import { applySavedInGameMapping } from "../../../services/emulatorInput";
@@ -121,6 +125,12 @@ export function ConfigPage() {
   const [cfgMsg, setCfgMsg] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
 
+  const [raEnabled, setRaEnabledState] = useState(false);
+  const [raHardcore, setRaHardcoreState] = useState(false);
+  const [raUser, setRaUser] = useState("");
+  const [raPass, setRaPass] = useState("");
+  const [raMsg, setRaMsg] = useState<string | null>(null);
+
   const load = useCallback(async () => {
     setLoading(true);
     try {
@@ -130,6 +140,11 @@ export function ConfigPage() {
       setPaymentState(await getPaymentEnabled());
       setCrtState(await getCrtShaderEnabled());
       setBezelState(await getBezelEnabled());
+      const ra = await getRaConfig();
+      setRaEnabledState(ra.enabled);
+      setRaHardcoreState(ra.hardcore);
+      setRaUser(ra.username);
+      setRaPass(ra.password);
       setCfg(await getAllRuntimeConfig());
     } finally {
       setLoading(false);
@@ -162,6 +177,25 @@ export function ConfigPage() {
     setBezelState(v);
     await setBezelEnabled(v);
     await applySavedInGameMapping().catch(() => {});
+  };
+
+  const toggleRaEnabled = async (v: boolean) => {
+    setRaEnabledState(v);
+    await setRaEnabled(v);
+    await applySavedInGameMapping().catch(() => {});
+  };
+
+  const toggleRaHardcore = async (v: boolean) => {
+    setRaHardcoreState(v);
+    await setRaHardcore(v);
+    await applySavedInGameMapping().catch(() => {});
+  };
+
+  const saveRaCredentials = async () => {
+    await setRaCredentials(raUser.trim(), raPass);
+    await applySavedInGameMapping().catch(() => {});
+    setRaMsg("Conta salva. Vale no próximo jogo aberto pelo RetroArch.");
+    window.setTimeout(() => setRaMsg(null), 3500);
   };
 
   const changePassword = async () => {
@@ -350,6 +384,72 @@ export function ConfigPage() {
           ) : (
             <Toggle checked={showWithoutRoms} onChange={(v) => void toggleShow(v)} />
           )}
+        </div>
+
+        {/* RetroAchievements */}
+        <div className="rounded-xl border border-zinc-800 bg-zinc-900/40 p-5">
+          <div className="flex items-center justify-between">
+            <div>
+              <div className="flex items-center font-semibold">
+                RetroAchievements (conquistas)
+                <HelpHint text="Liga as conquistas do RetroAchievements nos jogos abertos pelo RetroArch (consoles e arcade via core). Use uma conta criada em retroachievements.org. O MAME isolado não suporta conquistas. Vale no próximo jogo aberto." />
+              </div>
+              <div className="mt-1 max-w-xl text-sm text-zinc-400">
+                Conquistas in-game (pop-ups, progresso) com a conta do operador.
+              </div>
+            </div>
+            {loading ? (
+              <Spinner className="size-5" />
+            ) : (
+              <Toggle
+                checked={raEnabled}
+                onChange={(v) => void toggleRaEnabled(v)}
+              />
+            )}
+          </div>
+
+          {raEnabled && !loading ? (
+            <div className="mt-4 space-y-3 border-t border-zinc-800 pt-4">
+              <div className="flex flex-wrap items-end gap-2">
+                <label className="text-sm">
+                  <span className="mb-1 block text-zinc-400">Usuário RA</span>
+                  <Input
+                    value={raUser}
+                    onChange={(e) => setRaUser(e.target.value)}
+                    placeholder="seu_usuario"
+                    className="w-56"
+                  />
+                </label>
+                <label className="text-sm">
+                  <span className="mb-1 block text-zinc-400">Senha RA</span>
+                  <Input
+                    type="password"
+                    value={raPass}
+                    onChange={(e) => setRaPass(e.target.value)}
+                    placeholder="••••••••"
+                    className="w-56"
+                  />
+                </label>
+                <Button onClick={() => void saveRaCredentials()}>
+                  <Save className="h-4 w-4" /> Salvar conta
+                </Button>
+                {raMsg ? (
+                  <span className="text-sm text-emerald-300">{raMsg}</span>
+                ) : null}
+              </div>
+
+              <div className="flex items-center justify-between rounded-lg border border-zinc-800 bg-black/20 px-4 py-3">
+                <div className="flex items-center text-sm">
+                  Modo hardcore
+                  <HelpHint text="No modo hardcore não vale save state, rewind nem fast-forward (conquistas valem mais pontos). Desligado: modo softcore, mais permissivo. Para um fliperama, o softcore costuma ser melhor." />
+                </div>
+                <Toggle
+                  checked={raHardcore}
+                  onChange={(v) => void toggleRaHardcore(v)}
+                />
+              </div>
+            </div>
+          ) : null}
         </div>
 
         {/* Senha do painel */}

@@ -1,40 +1,7 @@
-import { appConfigDir, join } from "@tauri-apps/api/path";
 import {
-  exists,
-  mkdir,
-  readTextFile,
-  writeTextFile,
-} from "@tauri-apps/plugin-fs";
-
-type IniData = Record<string, Record<string, string>>;
-
-function parseIni(text: string): IniData {
-  const out: IniData = {};
-  let section = "default";
-  out[section] = {};
-
-  for (const raw of text.split(/\r?\n/)) {
-    const line = raw.trim();
-    if (!line || line.startsWith(";") || line.startsWith("#")) continue;
-
-    if (line.startsWith("[") && line.endsWith("]")) {
-      section = line.slice(1, -1).trim() || "default";
-      out[section] ??= {};
-      continue;
-    }
-
-    const eq = line.indexOf("=");
-    if (eq <= 0) continue;
-
-    const key = line.slice(0, eq).trim();
-    const value = line.slice(eq + 1).trim();
-
-    out[section] ??= {};
-    out[section][key] = value;
-  }
-
-  return out;
-}
+  getAllRuntimeConfig,
+  migrateIniToDbIfNeeded,
+} from "./runtimeConfig";
 
 function parseList(raw: string | undefined): string[] {
   if (!raw) return [];
@@ -42,37 +9,6 @@ function parseList(raw: string | undefined): string[] {
     .split(",")
     .map((item) => item.trim())
     .filter(Boolean);
-}
-
-async function ensureIni(): Promise<string> {
-  const cfgDir = await appConfigDir();
-  const iniPath = await join(cfgDir, "yt-overlay.ini");
-
-  await mkdir(cfgDir, { recursive: true });
-
-  const has = await exists(iniPath);
-  if (!has) {
-    const defaultIni = `; yt-overlay.ini
-
-[runtime]
-emulatorPath=
-romsDir=
-mediaBasePath=
-databasePath=
-themesBasePath=
-acceptedRomExtensions=.zip,.7z
-launchProfile=mame
-`;
-    await writeTextFile(iniPath, defaultIni);
-  }
-
-  return iniPath;
-}
-
-async function readIni(): Promise<{ iniPath: string; ini: IniData }> {
-  const iniPath = await ensureIni();
-  const iniText = await readTextFile(iniPath);
-  return { iniPath, ini: parseIni(iniText) };
 }
 
 export type PlatformLaunchProfile = "mame";
@@ -96,74 +32,48 @@ function getParentDirectory(path: string): string {
   return normalized.slice(0, index).replaceAll("/", "\\");
 }
 
+const CONFIG_HINT =
+  "Configure em Configurações no painel admin (Ctrl+Shift+A).";
+
 export async function loadRuntimeIniConfig(): Promise<RuntimeIniConfig> {
-  const { iniPath, ini } = await readIni();
+  // Migra valores do .ini legado para o banco na primeira vez (se houver).
+  await migrateIniToDbIfNeeded();
+  const cfg = await getAllRuntimeConfig();
 
-  const emulatorPath = (ini.runtime?.emulatorPath ?? "").trim();
-  const romsDir = (ini.runtime?.romsDir ?? "").trim();
-  const mediaBasePath = (ini.runtime?.mediaBasePath ?? "").trim();
-  const databasePath = (ini.runtime?.databasePath ?? "").trim();
-  const themesBasePath = (ini.runtime?.themesBasePath ?? "").trim();
-  const acceptedRomExtensions = parseList(ini.runtime?.acceptedRomExtensions);
-  const rawLaunchProfile = (ini.runtime?.launchProfile ?? "").trim();
+  const emulatorPath = cfg.emulatorPath.trim();
+  const romsDir = cfg.romsDir.trim();
+  const mediaBasePath = cfg.mediaBasePath.trim();
+  const databasePath = cfg.databasePath.trim();
+  const themesBasePath = cfg.themesBasePath.trim();
+  const acceptedRomExtensions = parseList(cfg.acceptedRomExtensions);
 
-  // hyperspinBasePath é a raiz da instalação do HyperSpin. Se não vier no ini,
-  // derivamos da pasta pai de databasePath (ex.: ...\HyperSpin\Databases -> ...\HyperSpin).
+  // hyperspinBasePath é a raiz dos dados. Se não vier configurado, derivamos da
+  // pasta pai de databasePath (ex.: ...\fliperama-data\Databases -> ...\fliperama-data).
   const hyperspinBasePath =
-    (ini.runtime?.hyperspinBasePath ?? "").trim() ||
+    cfg.hyperspinBasePath.trim() ||
     (databasePath ? getParentDirectory(databasePath) : "");
 
   if (!emulatorPath) {
-    throw new Error(
-      `emulatorPath não configurado. Edite o arquivo:\n${iniPath}\n\n` +
-        `Na seção [runtime], informe emulatorPath=...`,
-    );
+    throw new Error(`Caminho do emulador (MAME) não configurado. ${CONFIG_HINT}`);
   }
-
   if (!romsDir) {
-    throw new Error(
-      `romsDir não configurado. Edite o arquivo:\n${iniPath}\n\n` +
-        `Na seção [runtime], informe romsDir=...`,
-    );
+    throw new Error(`Pasta de ROMs não configurada. ${CONFIG_HINT}`);
   }
-
   if (!mediaBasePath) {
-    throw new Error(
-      `mediaBasePath não configurado. Edite o arquivo:\n${iniPath}\n\n` +
-        `Na seção [runtime], informe mediaBasePath=...`,
-    );
+    throw new Error(`Pasta de mídia não configurada. ${CONFIG_HINT}`);
   }
-
   if (!databasePath) {
-    throw new Error(
-      `databasePath não configurado. Edite o arquivo:\n${iniPath}\n\n` +
-        `Na seção [runtime], informe databasePath=...`,
-    );
+    throw new Error(`Pasta de banco de dados não configurada. ${CONFIG_HINT}`);
   }
-
   if (!themesBasePath) {
-    throw new Error(
-      `themesBasePath não configurado. Edite o arquivo:\n${iniPath}\n\n` +
-        `Na seção [runtime], informe themesBasePath=...`,
-    );
+    throw new Error(`Pasta de temas não configurada. ${CONFIG_HINT}`);
   }
-
   if (acceptedRomExtensions.length === 0) {
-    throw new Error(
-      `acceptedRomExtensions não configurado. Edite o arquivo:\n${iniPath}\n\n` +
-        `Na seção [runtime], informe acceptedRomExtensions=.zip,.7z`,
-    );
-  }
-
-  if (rawLaunchProfile !== "mame") {
-    throw new Error(
-      `launchProfile inválido no arquivo:\n${iniPath}\n\n` +
-        `Valor aceito atualmente: mame`,
-    );
+    throw new Error(`Extensões de ROM não configuradas. ${CONFIG_HINT}`);
   }
 
   return {
-    iniPath,
+    iniPath: CONFIG_HINT,
     hyperspinBasePath,
     emulatorPath,
     romsDir,

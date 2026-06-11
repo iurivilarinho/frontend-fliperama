@@ -40,6 +40,60 @@ export const DEFAULT_MAPPING: ControlMapping = {
   right: 15, // D-pad direita
 };
 
+// ── Mapeamento dentro do jogo (botões do controle nos emuladores) ──────────
+export type InGameButton =
+  | "south"
+  | "east"
+  | "west"
+  | "north"
+  | "l1"
+  | "r1"
+  | "l2"
+  | "r2"
+  | "select"
+  | "start"
+  | "up"
+  | "down"
+  | "left"
+  | "right";
+
+export const INGAME_BUTTONS: { key: InGameButton; label: string }[] = [
+  { key: "south", label: "A / ✕ (baixo)" },
+  { key: "east", label: "B / ○ (direita)" },
+  { key: "west", label: "X / □ (esquerda)" },
+  { key: "north", label: "Y / △ (cima)" },
+  { key: "l1", label: "L1 / LB" },
+  { key: "r1", label: "R1 / RB" },
+  { key: "l2", label: "L2 / LT" },
+  { key: "r2", label: "R2 / RT" },
+  { key: "select", label: "Select / Share" },
+  { key: "start", label: "Start / Options" },
+  { key: "up", label: "D-pad cima" },
+  { key: "down", label: "D-pad baixo" },
+  { key: "left", label: "D-pad esquerda" },
+  { key: "right", label: "D-pad direita" },
+];
+
+export type InGameMapping = Record<InGameButton, number>;
+
+// Layout padrão de um "Standard Gamepad" (W3C).
+export const DEFAULT_INGAME_MAPPING: InGameMapping = {
+  south: 0,
+  east: 1,
+  west: 2,
+  north: 3,
+  l1: 4,
+  r1: 5,
+  l2: 6,
+  r2: 7,
+  select: 8,
+  start: 9,
+  up: 12,
+  down: 13,
+  left: 14,
+  right: 15,
+};
+
 export function detectControllerType(id: string): ControllerType {
   const s = id.toLowerCase();
   if (

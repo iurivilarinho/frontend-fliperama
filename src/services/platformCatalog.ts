@@ -38,6 +38,14 @@ export type PlatformCatalogEntry = {
   launchProfile: LaunchProfile;
   /** Extensões de ROM aceitas para esta plataforma. */
   romExtensions: string[];
+  /**
+   * Como o usuário adiciona jogos pela interface:
+   * - "file" (padrão): seleciona um arquivo único (ROM/ISO) que é copiado para a
+   *   pasta de ROMs.
+   * - "folder": seleciona a PASTA do jogo (ex.: PS3 com PS3_GAME/USRDIR/EBOOT.BIN);
+   *   o EBOOT.BIN é localizado e registrado como alvo de execução (in-place).
+   */
+  gameImport?: "file" | "folder";
 };
 
 const RA_EXE = "Emulators/RetroArch/retroarch.exe";
@@ -235,6 +243,7 @@ export type ResolvedPlatformConfig = {
   launchArgs: string[];
   launchProfile: LaunchProfile;
   romExtensions: string[];
+  gameImport: "file" | "folder";
 };
 
 // Plataformas adicionadas dinamicamente (ex.: integração do pack AIO) ficam
@@ -302,5 +311,6 @@ export async function resolvePlatformConfig(
     launchArgs: entry.launchArgs ?? [],
     launchProfile: entry.launchProfile,
     romExtensions: entry.romExtensions,
+    gameImport: entry.gameImport ?? "file",
   };
 }

@@ -18,6 +18,7 @@ export type ManageablePlatform = {
   defaultExtensions: string[];
   enabled: boolean;
   launchProfile: string;
+  gameImport: "file" | "folder";
 };
 
 /**
@@ -52,6 +53,7 @@ export async function listManageablePlatforms(): Promise<ManageablePlatform[]> {
       defaultExtensions: cfg.romExtensions,
       enabled: override?.enabled ?? true,
       launchProfile: cfg.launchProfile,
+      gameImport: cfg.gameImport,
     });
   }
 

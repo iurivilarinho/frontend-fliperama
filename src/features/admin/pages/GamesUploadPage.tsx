@@ -9,6 +9,7 @@ import {
 } from "../../../services/platforms";
 import {
   uploadGameFiles,
+  uploadGameFolder,
   type UploadResult,
 } from "../../../services/gameUpload";
 import {
@@ -127,6 +128,26 @@ export function GamesUploadPage() {
     await handlePaths(paths);
   }, [handlePaths]);
 
+  const handlePickFolder = useCallback(async () => {
+    const platform = selectedRef.current;
+    if (!platform) return;
+    const picked = await open({ multiple: false, directory: true });
+    if (!picked || Array.isArray(picked)) return;
+
+    setUploading(true);
+    setError(null);
+    try {
+      const res = await uploadGameFolder(platform, picked);
+      setResults([res]);
+      await refreshUploaded(platform.name);
+    } catch (caught) {
+      console.error(caught);
+      setError("Falha ao adicionar a pasta do jogo.");
+    } finally {
+      setUploading(false);
+    }
+  }, [refreshUploaded]);
+
   const handleSaveExtensions = useCallback(async () => {
     if (!selected) return;
     const exts = extText
@@ -211,6 +232,27 @@ export function GamesUploadPage() {
             </div>
           ) : null}
         </button>
+
+        {selected?.gameImport === "folder" ? (
+          <div className="mt-4 rounded-xl border border-zinc-800 bg-zinc-900/40 p-4">
+            <div className="mb-2 text-sm font-semibold text-zinc-300">
+              Jogo em pasta (ex.: PS3)
+            </div>
+            <p className="mb-3 text-xs text-zinc-500">
+              Jogos de PS3 são pastas (com PS3_GAME/USRDIR/EBOOT.BIN). Selecione a
+              pasta do jogo — o EBOOT.BIN é localizado e registrado para abrir
+              pelo RPCS3 (a pasta é referenciada onde está, sem cópia). Pacotes
+              .pkg devem ser instalados pelo próprio RPCS3.
+            </p>
+            <button
+              type="button"
+              onClick={() => void handlePickFolder()}
+              className="flex items-center gap-2 rounded-lg border border-zinc-600 bg-zinc-800 px-4 py-2 text-sm font-semibold hover:border-emerald-400"
+            >
+              <Upload className="h-4 w-4" /> Selecionar pasta de jogo
+            </button>
+          </div>
+        ) : null}
 
         {results.length > 0 ? (
           <div className="mt-6 space-y-1">

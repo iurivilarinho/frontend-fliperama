@@ -4,6 +4,7 @@ import { exists, readDir, readTextFile } from "@tauri-apps/plugin-fs";
 import { loadRuntimeIniConfig } from "./iniConfig";
 import { getPlatformRuntimeConfig } from "./platformRuntimeConfig";
 import { getShowWithoutRoms } from "./db/settings";
+import { listUploadedGames } from "./db/platformConfig";
 
 export type HyperspinGame = {
   name: string;
@@ -200,6 +201,8 @@ export async function listHyperspinGames(params: {
 
   const gameElements = Array.from(document.getElementsByTagName("game"));
   const games: HyperspinGame[] = [];
+  // Index por nome normalizado para mesclar jogos enviados pelo painel.
+  const byKey = new Map<string, HyperspinGame>();
 
   for (const gameElement of gameElements) {
     const rawName = gameElement.getAttribute("name")?.trim();
@@ -227,7 +230,7 @@ export async function listHyperspinGames(params: {
     const backgroundImagePath = snapMap.get(mediaKey) ?? null;
     const videoPath = videoMap.get(mediaKey) ?? null;
 
-    games.push({
+    const game: HyperspinGame = {
       name: rawName,
       description,
       manufacturer,
@@ -243,7 +246,63 @@ export async function listHyperspinGames(params: {
         : null,
       videoPath,
       videoUrl: videoPath ? convertFileSrc(videoPath) : null,
-    });
+    };
+    games.push(game);
+    byKey.set(romKey, game);
+  }
+
+  // Mescla jogos enviados pelo painel (tabela uploaded_games). O alvo de
+  // execução vem do file_path registrado — cobre tanto arquivos copiados quanto
+  // jogos referenciados in-place (pastas de PS3 → EBOOT.BIN). Jogos que não
+  // estão no XML entram aqui como entradas novas.
+  let uploaded: Awaited<ReturnType<typeof listUploadedGames>> = [];
+  try {
+    uploaded = await listUploadedGames(platformName);
+  } catch (error) {
+    console.warn("Não foi possível ler jogos enviados:", platformName, error);
+  }
+
+  for (const row of uploaded) {
+    const romKey = normalizeRomKey(row.rom_name);
+    const fileExists = row.file_path ? await exists(row.file_path) : false;
+
+    const existing = byKey.get(romKey);
+    if (existing) {
+      // Já estava no XML: completa o caminho da ROM se faltava.
+      if (!existing.hasRom && fileExists) {
+        existing.romPath = row.file_path;
+        existing.hasRom = true;
+      }
+      continue;
+    }
+
+    if (!fileExists && !showWithoutRoms) continue;
+
+    const label = row.title?.trim() || row.rom_name;
+    const mediaKey = normalizeMediaKey(row.rom_name);
+    const wheelImagePath = wheelMap.get(mediaKey) ?? null;
+    const backgroundImagePath = snapMap.get(mediaKey) ?? null;
+    const videoPath = videoMap.get(mediaKey) ?? null;
+
+    const game: HyperspinGame = {
+      name: row.rom_name,
+      description: label,
+      manufacturer: null,
+      year: null,
+      genre: null,
+      romPath: fileExists ? row.file_path : "",
+      hasRom: fileExists,
+      wheelImagePath,
+      wheelImageUrl: wheelImagePath ? convertFileSrc(wheelImagePath) : null,
+      backgroundImagePath,
+      backgroundImageUrl: backgroundImagePath
+        ? convertFileSrc(backgroundImagePath)
+        : null,
+      videoPath,
+      videoUrl: videoPath ? convertFileSrc(videoPath) : null,
+    };
+    games.push(game);
+    byKey.set(romKey, game);
   }
 
   return games.sort(sortGames);

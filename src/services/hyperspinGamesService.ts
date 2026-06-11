@@ -3,6 +3,7 @@ import { join } from "@tauri-apps/api/path";
 import { exists, readDir, readTextFile } from "@tauri-apps/plugin-fs";
 import { loadRuntimeIniConfig } from "./iniConfig";
 import { getPlatformRuntimeConfig } from "./platformRuntimeConfig";
+import { getShowWithoutRoms } from "./db/settings";
 
 export type HyperspinGame = {
   name: string;
@@ -11,6 +12,7 @@ export type HyperspinGame = {
   year: string | null;
   genre: string | null;
   romPath: string;
+  hasRom: boolean;
   wheelImagePath: string | null;
   wheelImageUrl: string | null;
   backgroundImagePath: string | null;
@@ -62,6 +64,14 @@ function normalizeRomKey(value: string): string {
   return value.trim().toLowerCase();
 }
 
+// Junção de caminho LOCAL (sem IPC). O `join` do Tauri faz uma chamada ao
+// backend por arquivo — com milhares de arquivos isso fica lento. Aqui montamos
+// o caminho direto (Windows/Tauri aceitam ambos os separadores).
+function pathJoin(directory: string, name: string): string {
+  const sep = directory.includes("\\") ? "\\" : "/";
+  return directory.replace(/[\\/]+$/, "") + sep + name;
+}
+
 async function buildMediaMap(
   directoryPath: string,
   allowedExtensions: string[],
@@ -79,7 +89,7 @@ async function buildMediaMap(
 
     if (!hasAllowedExtension) continue;
 
-    const absolutePath = await join(directoryPath, entry.name);
+    const absolutePath = pathJoin(directoryPath, entry.name);
     const key = normalizeMediaKey(removeExtension(entry.name));
 
     if (!mediaMap.has(key)) {
@@ -107,7 +117,7 @@ async function buildRomMap(
 
     if (!hasAcceptedExtension) continue;
 
-    const absolutePath = await join(romsDir, entry.name);
+    const absolutePath = pathJoin(romsDir, entry.name);
     const key = normalizeRomKey(removeExtension(entry.name));
 
     if (!romMap.has(key)) {
@@ -185,6 +195,9 @@ export async function listHyperspinGames(params: {
     runtimeConfig.romExtensions,
   );
 
+  // Parâmetro do admin: mostrar jogos mesmo sem ROM no disco.
+  const showWithoutRoms = await getShowWithoutRoms();
+
   const gameElements = Array.from(document.getElementsByTagName("game"));
   const games: HyperspinGame[] = [];
 
@@ -194,11 +207,14 @@ export async function listHyperspinGames(params: {
     if (!rawName) continue;
 
     const romKey = normalizeRomKey(rawName);
-    const romPath = romMap.get(romKey);
+    const matchedRomPath = romMap.get(romKey);
+    const hasRom = Boolean(matchedRomPath);
 
-    if (!romPath) {
+    // Sem ROM: só inclui se o parâmetro estiver ligado.
+    if (!hasRom && !showWithoutRoms) {
       continue;
     }
+    const romPath = matchedRomPath ?? "";
 
     const description = getTextContent(gameElement, "description") ?? rawName;
     const manufacturer = getTextContent(gameElement, "manufacturer");
@@ -218,6 +234,7 @@ export async function listHyperspinGames(params: {
       year,
       genre,
       romPath,
+      hasRom,
       wheelImagePath,
       wheelImageUrl: wheelImagePath ? convertFileSrc(wheelImagePath) : null,
       backgroundImagePath,

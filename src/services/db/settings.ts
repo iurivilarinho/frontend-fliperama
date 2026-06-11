@@ -47,3 +47,18 @@ export async function setAdminPassword(newPassword: string): Promise<void> {
   const hash = await sha256Hex(newPassword);
   await setSetting(ADMIN_PASSWORD_KEY, hash);
 }
+
+const SHOW_WITHOUT_ROMS_KEY = "show_without_roms";
+
+/** Se true, a interface mostra jogos mesmo sem ROM no disco. Padrão: false. */
+export async function getShowWithoutRoms(): Promise<boolean> {
+  try {
+    return (await getSetting(SHOW_WITHOUT_ROMS_KEY)) === "true";
+  } catch {
+    return false;
+  }
+}
+
+export async function setShowWithoutRoms(value: boolean): Promise<void> {
+  await setSetting(SHOW_WITHOUT_ROMS_KEY, value ? "true" : "false");
+}

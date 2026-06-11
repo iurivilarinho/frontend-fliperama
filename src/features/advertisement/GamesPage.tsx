@@ -196,6 +196,7 @@ export function GamesPage() {
         key: game.name,
         label: game.description,
         imageUrl: game.wheelImageUrl,
+        dim: !game.hasRom,
       })),
     [filteredGames],
   );
@@ -253,6 +254,8 @@ export function GamesPage() {
   const launchGame = useCallback(
     async (game: HyperspinGame) => {
       if (!platform || launchingGameName) return;
+      // Jogo sem ROM no disco (modo "mostrar sem ROMs"): não dá pra abrir.
+      if (!game.hasRom) return;
 
       setLaunchingGameName(game.name);
 
@@ -543,6 +546,11 @@ export function GamesPage() {
           {selectedGame ? (
             <div className="pointer-events-none absolute bottom-10 left-8 z-30 max-w-[46%]">
               <div className="flex items-center gap-3">
+                {!selectedGame.hasRom ? (
+                  <span className="rounded-full bg-red-500/20 px-3 py-0.5 text-xs font-bold text-red-300">
+                    SEM ROM
+                  </span>
+                ) : null}
                 {stats[selectedGame.name]?.favorite ? (
                   <span className="text-3xl text-amber-300 drop-shadow">★</span>
                 ) : null}

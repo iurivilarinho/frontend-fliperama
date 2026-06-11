@@ -11,6 +11,7 @@ import { UsagePage } from "./pages/UsagePage";
 import { SavesPage } from "./pages/SavesPage";
 import { CatalogPage } from "./pages/CatalogPage";
 import { ControlsPage } from "./pages/ControlsPage";
+import { ConfigPage } from "./pages/ConfigPage";
 
 function AdminGate() {
   const { isAuthed } = useAdminAuth();
@@ -31,6 +32,7 @@ function AdminGate() {
         <Route path="saves" element={<SavesPage />} />
         <Route path="catalogo" element={<CatalogPage />} />
         <Route path="controles" element={<ControlsPage />} />
+        <Route path="config" element={<ConfigPage />} />
         <Route path="*" element={<AdminOverviewPage />} />
       </Route>
     </Routes>

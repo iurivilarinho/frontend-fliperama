@@ -7,6 +7,7 @@ import {
   Library,
   LogOut,
   Save,
+  Settings,
   Tags,
   Timer,
   Upload,
@@ -23,6 +24,7 @@ const NAV = [
   { to: "/admin/saves", label: "Saves", icon: Save },
   { to: "/admin/controles", label: "Controles", icon: Gamepad2 },
   { to: "/admin/catalogo", label: "Catálogo", icon: Library },
+  { to: "/admin/config", label: "Configurações", icon: Settings },
 ];
 
 export function AdminLayout() {

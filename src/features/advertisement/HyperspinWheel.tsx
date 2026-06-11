@@ -4,6 +4,8 @@ export type HyperspinWheelItem = {
   key: string;
   label: string;
   imageUrl: string | null;
+  /** Esmaecido (ex.: jogo sem ROM no disco). */
+  dim?: boolean;
 };
 
 type HyperspinWheelProps = {
@@ -64,7 +66,8 @@ export function HyperspinWheel({
         const rotate = -directionSign * offset * (ANGLE_STEP * 0.35);
 
         const scale = clamp(1 - absOffset * 0.13, 0.42, 1);
-        const opacity = clamp(1 - absOffset * 0.2, 0.14, 1);
+        const baseOpacity = clamp(1 - absOffset * 0.2, 0.14, 1);
+        const opacity = item.dim ? baseOpacity * 0.4 : baseOpacity;
 
         return (
           <button

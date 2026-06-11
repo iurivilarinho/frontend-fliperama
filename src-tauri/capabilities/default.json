@@ -20,6 +20,7 @@
     "core:window:allow-set-position",
     "core:window:allow-current-monitor",
     "core:default",
+    "core:event:default",
     "sql:default",
     "sql:allow-execute",
     "dialog:default",

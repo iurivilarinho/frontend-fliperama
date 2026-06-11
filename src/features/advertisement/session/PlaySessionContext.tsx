@@ -1,5 +1,6 @@
 /* eslint-disable react-refresh/only-export-components */
 import { invoke } from "@tauri-apps/api/core";
+import { listen } from "@tauri-apps/api/event";
 import { WebviewWindow } from "@tauri-apps/api/webviewWindow";
 import { getCurrentWindow } from "@tauri-apps/api/window";
 import {
@@ -117,6 +118,12 @@ export function PlaySessionProvider({ children }: { children: ReactNode }) {
     if (initial.status === "expired") {
       clearPersistedSession();
     }
+    // Após refresh/reconexão com sessão ativa, reagenda o timer garantido.
+    if (initial.status === "active" && initial.remainingSeconds > 0) {
+      void invoke("start_session_timer", {
+        remainingSecs: initial.remainingSeconds,
+      }).catch(() => {});
+    }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
@@ -134,6 +141,12 @@ export function PlaySessionProvider({ children }: { children: ReactNode }) {
       sessionIdRef.current = null;
 
       persistSession({ expiresAtMs, durationMinutes: minutes, sessionId: null });
+
+      // Timer garantido no backend (Rust): encerra o emulador no horário exato,
+      // mesmo se o app perder o foco e o timer do webview for estrangulado.
+      void invoke("start_session_timer", { remainingSecs: minutes * 60 }).catch(
+        () => {},
+      );
 
       void createSession({
         durationMinutes: minutes,
@@ -157,6 +170,7 @@ export function PlaySessionProvider({ children }: { children: ReactNode }) {
     if (status === "active") {
       void markSessionStatus(sessionIdRef.current, "ended");
     }
+    void invoke("cancel_session_timer").catch(() => {});
     setStatus("idle");
     setRemainingSeconds(0);
     setSelectedDurationMinutes(null);
@@ -164,6 +178,18 @@ export function PlaySessionProvider({ children }: { children: ReactNode }) {
     sessionIdRef.current = null;
     clearPersistedSession();
   }, [status]);
+
+  // Encerramento da sessão (zerou o tempo). Idempotente: usa expiresAtRef como
+  // trava para não rodar duas vezes (tick do webview + evento do Rust).
+  const handleExpiry = useCallback(() => {
+    if (expiresAtRef.current == null) return;
+    expiresAtRef.current = null;
+    setStatus("expired");
+    setRemainingSeconds(0);
+    void markSessionStatus(sessionIdRef.current, "expired");
+    void backupSaves();
+    clearPersistedSession();
+  }, []);
 
   // Tick: recalcula o restante a partir do timestamp absoluto (robusto a
   // drift, sleep do SO e troca de aba). Ao zerar, expira e bloqueia.
@@ -179,18 +205,33 @@ export function PlaySessionProvider({ children }: { children: ReactNode }) {
       setRemainingSeconds(remaining);
 
       if (remaining <= 0) {
-        setStatus("expired");
-        void markSessionStatus(sessionIdRef.current, "expired");
-        // Backup automático dos saves ao encerrar a sessão.
-        void backupSaves();
-        clearPersistedSession();
+        handleExpiry();
       }
     };
 
     tick();
     const timer = window.setInterval(tick, 1000);
     return () => window.clearInterval(timer);
-  }, [isMiniOverlayWindow, status]);
+  }, [isMiniOverlayWindow, status, handleExpiry]);
+
+  // Evento do backend (Rust): a sessão expirou e o emulador já foi encerrado.
+  // Garante o redirecionamento ao pagamento mesmo se o timer do webview falhar.
+  useEffect(() => {
+    if (isMiniOverlayWindow) return;
+
+    let unlisten: (() => void) | undefined;
+    listen("session-expired", () => {
+      handleExpiry();
+    })
+      .then((fn) => {
+        unlisten = fn;
+      })
+      .catch(() => {});
+
+    return () => {
+      if (unlisten) unlisten();
+    };
+  }, [isMiniOverlayWindow, handleExpiry]);
 
   useEffect(() => {
     if (isMiniOverlayWindow) return;

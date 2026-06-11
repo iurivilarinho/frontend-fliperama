@@ -1,6 +1,7 @@
-use std::sync::Mutex;
+use std::sync::atomic::{AtomicU64, Ordering};
+use std::sync::{Arc, Mutex};
 use tauri::State;
-use tauri::{AppHandle, Manager};
+use tauri::{AppHandle, Emitter, Manager};
 use tauri::webview::WebviewWindowBuilder;
 use tauri::menu::{Menu, MenuItem};
 use tauri::tray::{TrayIconBuilder, TrayIconEvent};
@@ -12,9 +13,58 @@ use windows_sys::Win32::UI::WindowsAndMessaging::{
 
 struct FocusState(Mutex<HWND>);
 
+/// Geração do timer de sessão. Cada agendamento incrementa o contador; a thread
+/// agendada só age se sua geração ainda for a atual (não foi cancelada/superada).
+struct SessionTimer(Arc<AtomicU64>);
 
 use std::path::{Path, PathBuf};
 use std::process::Command;
+
+/// Encerra todos os emuladores conhecidos (à força).
+fn kill_emulators() {
+  #[cfg(target_os = "windows")]
+  {
+    let emulators = [
+      "mame.exe",
+      "Project64.exe",
+      "nestopia.exe",
+      "zsnesw.exe",
+      "Fusion.exe",
+      "retroarch.exe",
+    ];
+    for emulator in emulators {
+      let _ = Command::new("taskkill")
+        .arg("/IM")
+        .arg(emulator)
+        .arg("/F")
+        .output();
+    }
+  }
+}
+
+/// Agenda o encerramento garantido da sessão: uma thread dorme `remaining_secs`
+/// e então mata os emuladores e avisa o frontend (evento "session-expired"),
+/// independente do app estar em foco. Cancela qualquer timer anterior.
+#[tauri::command]
+fn start_session_timer(app: AppHandle, state: State<'_, SessionTimer>, remaining_secs: u64) {
+  let generation = state.0.fetch_add(1, Ordering::SeqCst) + 1;
+  let counter = state.0.clone();
+
+  std::thread::spawn(move || {
+    std::thread::sleep(std::time::Duration::from_secs(remaining_secs));
+    // Só age se ninguém reagendou ou cancelou nesse meio tempo.
+    if counter.load(Ordering::SeqCst) == generation {
+      kill_emulators();
+      let _ = app.emit("session-expired", ());
+    }
+  });
+}
+
+/// Cancela o timer de sessão agendado (invalida qualquer thread pendente).
+#[tauri::command]
+fn cancel_session_timer(state: State<'_, SessionTimer>) {
+  state.0.fetch_add(1, Ordering::SeqCst);
+}
 
 #[tauri::command]
 fn quit_app(app: tauri::AppHandle) {
@@ -262,34 +312,8 @@ fn stop_running_overlays(app: AppHandle) -> Result<(), String> {
 
 #[tauri::command]
 fn stop_active_game() -> Result<(), String> {
-    #[cfg(target_os = "windows")]
-    {
-        // Encerra qualquer emulador conhecido que possa estar rodando.
-        let emulators = [
-            "mame.exe",
-            "Project64.exe",
-            "nestopia.exe",
-            "zsnesw.exe",
-            "Fusion.exe",
-            "retroarch.exe",
-        ];
-
-        for emulator in emulators {
-            let _ = Command::new("taskkill")
-                .arg("/IM")
-                .arg(emulator)
-                .arg("/F")
-                .output()
-                .map_err(|e| format!("Falha ao executar taskkill: {}", e))?;
-        }
-
-        return Ok(());
-    }
-
-    #[cfg(not(target_os = "windows"))]
-    {
-        Ok(())
-    }
+    kill_emulators();
+    Ok(())
 }
 
 fn db_migrations() -> Vec<tauri_plugin_sql::Migration> {
@@ -410,6 +434,7 @@ pub fn run() {
         .build(),
     )
     .manage(FocusState(Mutex::new(0)))
+    .manage(SessionTimer(Arc::new(AtomicU64::new(0))))
     .invoke_handler(tauri::generate_handler![
       save_foreground_window,
       restore_foreground_window,
@@ -421,6 +446,8 @@ pub fn run() {
       launch_generic,
       launch_retroarch,
       stop_active_game,
+      start_session_timer,
+      cancel_session_timer,
       quit_app
     ])
     .setup(|app| {

@@ -336,3 +336,24 @@ input:-webkit-autofill:active {
     display: none !important;
   }
 }
+
+/* Animação de abertura (splash) da logo Retro Nexus */
+@keyframes splash-in {
+  0% {
+    opacity: 0;
+    transform: scale(0.6);
+  }
+  55% {
+    opacity: 1;
+    transform: scale(1.06);
+  }
+  100% {
+    opacity: 1;
+    transform: scale(1);
+    filter: drop-shadow(0 0 40px rgba(129, 140, 248, 0.5));
+  }
+}
+
+.animate-splash-in {
+  animation: splash-in 1.4s ease-out both;
+}

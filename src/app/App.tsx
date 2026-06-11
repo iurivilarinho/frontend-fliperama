@@ -1,4 +1,4 @@
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { invoke } from "@tauri-apps/api/core";
 import { AppProvider } from "./provider/AppProvider";
 import { HyperspinThemeProvider } from "./provider/HyperspinThemeProvider";
@@ -7,10 +7,28 @@ import { AppRoutes } from "./routers/AppRoutes";
 import { PlaySessionProvider } from "../features/totem/session/PlaySessionContext";
 import { useGamepadNavigation } from "../hooks/useGamepadNavigation";
 import { applySavedInGameMapping } from "../services/emulatorInput";
+import { Splash } from "../components/Splash";
 
 export default function App() {
   // Ponte global de controle (PS/Xbox/genérico) -> navegação do totem.
   useGamepadNavigation();
+
+  // Animação de abertura com a logo (não na janela de mini-overlay).
+  const [splash, setSplash] = useState<"show" | "hiding" | "done">(() =>
+    typeof window !== "undefined" && window.location.pathname === "/player-mini"
+      ? "done"
+      : "show",
+  );
+  useEffect(() => {
+    if (splash === "done") return;
+    const t1 = window.setTimeout(() => setSplash("hiding"), 2200);
+    const t2 = window.setTimeout(() => setSplash("done"), 2750);
+    return () => {
+      window.clearTimeout(t1);
+      window.clearTimeout(t2);
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   // Auto-aplica a config de controle salva nos emuladores ao iniciar o totem.
   // Garante que num RetroArch novo/limpo os binds corretos e as travas de
@@ -45,6 +63,7 @@ export default function App() {
 
   return (
     <ThemeProvider defaultTheme="dark">
+      {splash !== "done" ? <Splash hiding={splash === "hiding"} /> : null}
       <HyperspinThemeProvider>
         <AppProvider>
           <PlaySessionProvider>

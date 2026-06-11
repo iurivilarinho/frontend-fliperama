@@ -10,6 +10,7 @@ import { loadRuntimeIniConfig } from "./iniConfig";
 import type { InGameButton, InGameMapping } from "./gamepad";
 import { loadInGameMapping, loadNumPlayers } from "./db/controls";
 import { getBezelEnabled, getCrtShaderEnabled } from "./db/settings";
+import { xinputBind } from "./xinputMapping";
 
 // RetroArch: sufixo do RetroPad -> botão lógico do nosso mapeamento.
 const RA_BTNS: [string, InGameButton][] = [
@@ -29,38 +30,7 @@ const RA_BTNS: [string, InGameButton][] = [
   ["right", "right"],
 ];
 
-// O mapeamento in-game guarda índices da Gamepad API do navegador (o que a tela
-// "Vincular" enxerga). O RetroArch, porém, roda no driver XInput, cuja numeração
-// DIVERGE: Start/Select são 7/6 (não 9/8), os gatilhos L2/R2 são EIXOS (não
-// botões), e o d-pad é um HAT (h0), não os botões 12-15. Sem traduzir, Start,
-// Select, gatilhos e d-pad ficam errados no jogo. Esta função converte o índice
-// do navegador para o bind correto do XInput.
-function xinputBind(browserIdx: number): { suffix: "btn" | "axis"; value: string } {
-  switch (browserIdx) {
-    case 6:
-      return { suffix: "axis", value: "+2" }; // LT (gatilho esquerdo)
-    case 7:
-      return { suffix: "axis", value: "-2" }; // RT (gatilho direito)
-    case 8:
-      return { suffix: "btn", value: "6" }; // Back/Select
-    case 9:
-      return { suffix: "btn", value: "7" }; // Start
-    case 10:
-      return { suffix: "btn", value: "8" }; // L3
-    case 11:
-      return { suffix: "btn", value: "9" }; // R3
-    case 12:
-      return { suffix: "btn", value: "h0up" };
-    case 13:
-      return { suffix: "btn", value: "h0down" };
-    case 14:
-      return { suffix: "btn", value: "h0left" };
-    case 15:
-      return { suffix: "btn", value: "h0right" };
-    default:
-      return { suffix: "btn", value: String(browserIdx) }; // 0-5 coincidem
-  }
-}
+// xinputBind: tradução browser->XInput, em ./xinputMapping (módulo puro/testável).
 
 async function applyToRetroArch(
   base: string,

@@ -27,6 +27,8 @@ export default defineConfig({
         "src/services/uploadRules.ts",
         "src/services/reconcile.ts",
         "src/services/payment/types.ts",
+        "src/services/sha256.ts",
+        "src/services/xinputMapping.ts",
       ],
       thresholds: {
         lines: 80,

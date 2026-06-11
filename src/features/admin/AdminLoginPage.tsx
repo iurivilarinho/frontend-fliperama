@@ -3,6 +3,7 @@ import { useNavigate } from "react-router-dom";
 import { useAdminAuth } from "./AdminAuthContext";
 import { RESET_FILENAME } from "../../services/adminAuth";
 import { Spinner } from "../../components/spinner/Spinner";
+import { Button, Input } from "../../components/ui";
 
 export function AdminLoginPage() {
   const { login, setupPassword, passwordSet } = useAdminAuth();
@@ -76,38 +77,38 @@ export function AdminLoginPage() {
             : "Informe a senha para continuar."}
         </p>
 
-        <input
+        <Input
           type="password"
           autoFocus
           value={password}
           onChange={(e) => setPassword(e.target.value)}
           placeholder={firstRun ? "Nova senha" : "Senha"}
-          className="mt-6 w-full rounded-lg border border-zinc-700 bg-zinc-800 px-4 py-3 text-sm outline-none focus:border-emerald-400"
+          className="mt-6 w-full"
         />
 
         {firstRun ? (
-          <input
+          <Input
             type="password"
             value={confirm}
             onChange={(e) => setConfirm(e.target.value)}
             placeholder="Confirme a senha"
-            className="mt-3 w-full rounded-lg border border-zinc-700 bg-zinc-800 px-4 py-3 text-sm outline-none focus:border-emerald-400"
+            className="mt-3 w-full"
           />
         ) : null}
 
         {error ? <p className="mt-3 text-sm text-red-400">{error}</p> : null}
 
-        <button
+        <Button
           type="submit"
           disabled={loading || !password}
-          className="mt-6 w-full rounded-lg bg-emerald-500 px-4 py-3 text-sm font-semibold text-zinc-950 transition hover:bg-emerald-400 disabled:opacity-50"
+          className="mt-6 w-full"
         >
           {loading
             ? "Aguarde..."
             : firstRun
               ? "Criar senha e entrar"
               : "Entrar"}
-        </button>
+        </Button>
 
         {firstRun ? null : (
           <p className="mt-4 text-center text-xs text-zinc-600">

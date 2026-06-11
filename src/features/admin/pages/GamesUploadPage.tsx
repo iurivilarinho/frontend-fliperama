@@ -3,6 +3,7 @@ import { open } from "@tauri-apps/plugin-dialog";
 import { getCurrentWebview } from "@tauri-apps/api/webview";
 import { Upload, Check, X, Save } from "lucide-react";
 import { AdminPageHeader } from "../AdminLayout";
+import { Button, Input, Select } from "../../../components/ui";
 import {
   listManageablePlatforms,
   type ManageablePlatform,
@@ -176,20 +177,20 @@ export function GamesUploadPage() {
         <div className="mb-6 flex flex-wrap items-end gap-4">
           <label className="text-sm">
             <span className="mb-1 block text-zinc-400">Plataforma</span>
-            <select
+            <Select
               value={selectedName}
               onChange={(e) => {
                 setSelectedName(e.target.value);
                 setResults([]);
               }}
-              className="min-w-64 rounded-lg border border-zinc-700 bg-zinc-800 px-3 py-2 outline-none focus:border-emerald-400"
+              className="min-w-64"
             >
               {platforms.map((p) => (
                 <option key={p.name} value={p.name}>
                   {p.name}
                 </option>
               ))}
-            </select>
+            </Select>
           </label>
 
           <label className="flex-1 text-sm">
@@ -197,19 +198,18 @@ export function GamesUploadPage() {
               Extensões permitidas (separadas por vírgula)
             </span>
             <div className="flex gap-2">
-              <input
+              <Input
                 value={extText}
                 onChange={(e) => setExtText(e.target.value)}
                 placeholder=".zip, .7z"
-                className="min-w-0 flex-1 rounded-lg border border-zinc-700 bg-zinc-800 px-3 py-2 outline-none focus:border-emerald-400"
+                className="min-w-0 flex-1"
               />
-              <button
-                type="button"
+              <Button
+                variant="secondary"
                 onClick={() => void handleSaveExtensions()}
-                className="flex items-center gap-2 rounded-lg border border-zinc-600 bg-zinc-800 px-4 py-2 text-sm font-semibold hover:border-emerald-400"
               >
                 <Save className="h-4 w-4" /> Salvar
-              </button>
+              </Button>
             </div>
           </label>
         </div>
@@ -249,13 +249,9 @@ export function GamesUploadPage() {
               pelo RPCS3 (a pasta é referenciada onde está, sem cópia). Pacotes
               .pkg devem ser instalados pelo próprio RPCS3.
             </p>
-            <button
-              type="button"
-              onClick={() => void handlePickFolder()}
-              className="flex items-center gap-2 rounded-lg border border-zinc-600 bg-zinc-800 px-4 py-2 text-sm font-semibold hover:border-emerald-400"
-            >
+            <Button variant="secondary" onClick={() => void handlePickFolder()}>
               <Upload className="h-4 w-4" /> Selecionar pasta de jogo
-            </button>
+            </Button>
           </div>
         ) : null}
 

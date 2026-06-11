@@ -2,6 +2,7 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import { RefreshCw, Search } from "lucide-react";
 import { AdminPageHeader } from "../AdminLayout";
 import { Spinner } from "../../../components/spinner/Spinner";
+import { Button, Input, Select } from "../../../components/ui";
 import {
   listManageablePlatforms,
   type ManageablePlatform,
@@ -62,13 +63,9 @@ export function CatalogPage() {
         title="Catálogo de plataformas"
         description="Configuração de cada plataforma: emulador, perfil de launch, banco e pasta de ROMs. Desligue uma plataforma para escondê-la do totem."
         actions={
-          <button
-            type="button"
-            onClick={() => void load()}
-            className="flex items-center gap-2 rounded-lg border border-zinc-600 bg-zinc-800 px-4 py-2 text-sm font-semibold hover:border-emerald-400"
-          >
+          <Button variant="secondary" onClick={() => void load()}>
             <RefreshCw className="h-4 w-4" /> Atualizar
-          </button>
+          </Button>
         }
       />
 
@@ -81,23 +78,22 @@ export function CatalogPage() {
             <div className="mb-4 flex flex-wrap items-center gap-3">
               <div className="relative">
                 <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-zinc-500" />
-                <input
+                <Input
                   value={filter}
                   onChange={(e) => setFilter(e.target.value)}
                   placeholder="Filtrar plataforma..."
-                  className="w-64 rounded-lg border border-zinc-700 bg-zinc-800 py-2 pl-9 pr-3 text-sm outline-none focus:border-emerald-400"
+                  className="w-64 pl-9 pr-3"
                 />
               </div>
-              <select
+              <Select
                 value={profileFilter}
                 onChange={(e) => setProfileFilter(e.target.value)}
-                className="rounded-lg border border-zinc-700 bg-zinc-800 px-3 py-2 text-sm outline-none focus:border-emerald-400"
               >
                 <option value="all">Todos os perfis</option>
                 <option value="mame">MAME</option>
                 <option value="retroarch">RetroArch</option>
                 <option value="generic">Standalone</option>
-              </select>
+              </Select>
               <span className="text-sm text-zinc-500">
                 {filtered.length} de {platforms.length} ·{" "}
                 {platforms.filter((p) => p.enabled).length} habilitadas

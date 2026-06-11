@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useState } from "react";
 import { Download, ImageDown } from "lucide-react";
 import { AdminPageHeader } from "../AdminLayout";
+import { Button, Select } from "../../../components/ui";
 import { listCatalogPlatformNames } from "../../../services/platformCatalog";
 import {
   scrapePlatformArt,
@@ -60,28 +61,23 @@ export function ScraperPage() {
         <div className="flex flex-wrap items-end gap-4">
           <label className="text-sm">
             <span className="mb-1 block text-zinc-400">Plataforma</span>
-            <select
+            <Select
               value={selected}
               onChange={(e) => setSelected(e.target.value)}
               disabled={running}
-              className="min-w-72 rounded-lg border border-zinc-700 bg-zinc-800 px-3 py-2 outline-none focus:border-emerald-400"
+              className="min-w-72"
             >
               {platforms.map((p) => (
                 <option key={p} value={p}>
                   {p}
                 </option>
               ))}
-            </select>
+            </Select>
           </label>
-          <button
-            type="button"
-            onClick={() => void run()}
-            disabled={running || !selected}
-            className="flex items-center gap-2 rounded-lg bg-emerald-500 px-4 py-2 text-sm font-semibold text-zinc-950 hover:bg-emerald-400 disabled:opacity-50"
-          >
+          <Button onClick={() => void run()} disabled={running || !selected}>
             <Download className="h-4 w-4" />
             {running ? "Baixando..." : "Baixar arte"}
-          </button>
+          </Button>
         </div>
 
         {platforms.length === 0 ? (

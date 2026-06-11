@@ -7,6 +7,7 @@ import {
   type PlatformReconciliation,
 } from "../../../services/romLibrary";
 import { Spinner } from "../../../components/spinner/Spinner";
+import { Button, Input } from "../../../components/ui";
 
 function Kpi({ label, value, tone }: { label: string; value: string | number; tone?: string }) {
   return (
@@ -56,13 +57,9 @@ export function RomsPage() {
         title="Gestão de ROMs"
         description="Reconciliação entre os jogos cadastrados (banco) e os arquivos de ROM no disco."
         actions={
-          <button
-            type="button"
-            onClick={() => void load()}
-            className="flex items-center gap-2 rounded-lg border border-zinc-600 bg-zinc-800 px-4 py-2 text-sm font-semibold hover:border-emerald-400"
-          >
+          <Button variant="secondary" onClick={() => void load()}>
             <RefreshCw className="h-4 w-4" /> Atualizar
-          </button>
+          </Button>
         }
       />
 
@@ -102,11 +99,11 @@ export function RomsPage() {
             <div className="mt-8 flex items-center gap-2">
               <div className="relative">
                 <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-zinc-500" />
-                <input
+                <Input
                   value={filter}
                   onChange={(e) => setFilter(e.target.value)}
                   placeholder="Filtrar plataforma..."
-                  className="w-72 rounded-lg border border-zinc-700 bg-zinc-800 py-2 pl-9 pr-3 text-sm outline-none focus:border-emerald-400"
+                  className="w-72 pl-9 pr-3"
                 />
               </div>
               <span className="text-xs text-zinc-500">

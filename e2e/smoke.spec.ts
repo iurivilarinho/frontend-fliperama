@@ -30,7 +30,11 @@ test.describe("Totem - shells principais", () => {
 
   test("painel admin exige senha", async ({ page }) => {
     await page.goto("/admin", { waitUntil: "domcontentloaded" });
-    await expect(page.getByText("Painel administrativo")).toBeVisible();
-    await expect(page.getByPlaceholder("Senha")).toBeVisible();
+    // Sem banco no e2e, o admin cai no primeiro acesso ("Definir senha"); com
+    // senha já cadastrada mostra "Painel administrativo". Aceita os dois.
+    await expect(
+      page.getByText(/Painel administrativo|Definir senha do admin/),
+    ).toBeVisible();
+    await expect(page.getByPlaceholder(/senha/i).first()).toBeVisible();
   });
 });

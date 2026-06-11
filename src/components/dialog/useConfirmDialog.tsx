@@ -7,19 +7,19 @@ import {
   DialogHeader,
   DialogTitle,
 } from "./Dialog";
-import { Button } from "../button/button";
+import { Button } from "../ui/Button";
 
-interface ConfirmOptions {
+type ConfirmOptions = {
   title: string;
   description: string;
   confirmLabel?: string;
   cancelLabel?: string;
   variant?: "default" | "destructive";
-}
+};
 
-interface ConfirmDialogContextValue {
+type ConfirmDialogContextValue = {
   confirm: (options: ConfirmOptions) => Promise<boolean>;
-}
+};
 
 const ConfirmDialogContext = createContext<ConfirmDialogContextValue | null>(
   null,
@@ -33,11 +33,13 @@ export const useConfirm = () => {
   return context.confirm;
 };
 
+type ConfirmDialogProviderProps = {
+  children: ReactNode;
+};
+
 export const ConfirmDialogProvider = ({
   children,
-}: {
-  children: ReactNode;
-}) => {
+}: ConfirmDialogProviderProps) => {
   const [isOpen, setIsOpen] = useState(false);
   const [options, setOptions] = useState<ConfirmOptions | null>(null);
   const [resolver, setResolver] = useState<((value: boolean) => void) | null>(
@@ -77,7 +79,7 @@ export const ConfirmDialogProvider = ({
                 {options.cancelLabel || "Cancelar"}
               </Button>
               <Button
-                variant={options.variant || "default"}
+                variant={options.variant === "destructive" ? "danger" : "primary"}
                 onClick={handleConfirm}
               >
                 {options.confirmLabel || "Confirmar"}

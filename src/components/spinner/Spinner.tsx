@@ -1,5 +1,5 @@
 import { Gamepad2 } from "lucide-react";
-import { mergeClasses } from "../../lib/mergeClasses";
+import { cn } from "../../lib/mergeClasses";
 
 /**
  * Spinner com cara de plataforma de games: um anel girando (verde do tema) com
@@ -10,7 +10,7 @@ function Spinner({ className }: { className?: string }) {
     <span
       role="status"
       aria-label="Carregando"
-      className={mergeClasses(
+      className={cn(
         "relative inline-flex size-10 items-center justify-center",
         className,
       )}

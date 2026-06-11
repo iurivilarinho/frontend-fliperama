@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { Gamepad2, RefreshCw, Wrench } from "lucide-react";
 import { AdminPageHeader } from "../AdminLayout";
+import { Button } from "../../../components/ui";
 import { GamepadVisual, type GamepadVariant } from "../GamepadVisual";
 import {
   CONTROL_ACTIONS,
@@ -274,13 +275,13 @@ export function ControlsPage() {
             <h2 className="text-sm font-bold uppercase tracking-wide text-zinc-300">
               Navegação do totem
             </h2>
-            <button
-              type="button"
+            <Button
+              variant="secondary"
+              size="sm"
               onClick={() => void resetNav()}
-              className="flex items-center gap-2 rounded-lg border border-zinc-600 bg-zinc-800 px-3 py-1 text-xs hover:border-emerald-400"
             >
               <RefreshCw className="h-3 w-3" /> Padrão
-            </button>
+            </Button>
           </div>
           <div className="overflow-hidden rounded-xl border border-zinc-800">
             <table className="w-full text-sm">
@@ -324,22 +325,21 @@ export function ControlsPage() {
                   ))}
                 </select>
               </label>
-              <button
-                type="button"
+              <Button
+                variant="secondary"
+                size="sm"
                 onClick={() => void resetIngame()}
-                className="flex items-center gap-2 rounded-lg border border-zinc-600 bg-zinc-800 px-3 py-1 text-xs hover:border-emerald-400"
               >
                 <RefreshCw className="h-3 w-3" /> Padrão
-              </button>
-              <button
-                type="button"
+              </Button>
+              <Button
+                size="sm"
                 disabled={applying}
                 onClick={() => void handleApply()}
-                className="flex items-center gap-2 rounded-lg bg-emerald-500 px-3 py-1 text-xs font-semibold text-zinc-950 hover:bg-emerald-400 disabled:opacity-50"
               >
                 <Wrench className="h-3 w-3" />
                 {applying ? "Aplicando..." : "Aplicar aos emuladores"}
-              </button>
+              </Button>
             </div>
           </div>
           <div className="overflow-hidden rounded-xl border border-zinc-800">

@@ -2,6 +2,7 @@ import { useCallback, useEffect, useState } from "react";
 import { Plus, Trash2 } from "lucide-react";
 import { AdminPageHeader } from "../AdminLayout";
 import { Spinner } from "../../../components/spinner/Spinner";
+import { Button, Input } from "../../../components/ui";
 import {
   createTier,
   deleteTier,
@@ -79,33 +80,29 @@ export function PricingPage() {
         <div className="mb-6 flex flex-wrap items-end gap-3 rounded-xl border border-zinc-800 bg-zinc-900/40 p-5">
           <label className="text-sm">
             <span className="mb-1 block text-zinc-400">Minutos</span>
-            <input
+            <Input
               type="number"
               min={1}
               value={newMinutes}
               onChange={(e) => setNewMinutes(e.target.value)}
-              className="w-28 rounded-lg border border-zinc-700 bg-zinc-800 px-3 py-2 outline-none focus:border-emerald-400"
+              className="w-28"
               placeholder="1"
             />
           </label>
           <label className="text-sm">
             <span className="mb-1 block text-zinc-400">Valor (R$)</span>
-            <input
+            <Input
               type="text"
               inputMode="decimal"
               value={newPrice}
               onChange={(e) => setNewPrice(e.target.value)}
-              className="w-32 rounded-lg border border-zinc-700 bg-zinc-800 px-3 py-2 outline-none focus:border-emerald-400"
+              className="w-32"
               placeholder="1,50"
             />
           </label>
-          <button
-            type="button"
-            onClick={() => void handleAdd()}
-            className="flex items-center gap-2 rounded-lg bg-emerald-500 px-4 py-2 text-sm font-semibold text-zinc-950 hover:bg-emerald-400"
-          >
+          <Button onClick={() => void handleAdd()}>
             <Plus className="h-4 w-4" /> Adicionar faixa
-          </button>
+          </Button>
         </div>
 
         {error ? <p className="text-sm text-red-400">{error}</p> : null}

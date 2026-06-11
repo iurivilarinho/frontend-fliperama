@@ -15,6 +15,7 @@ import {
 } from "../../../services/db/settings";
 import { applySavedInGameMapping } from "../../../services/emulatorInput";
 import { Spinner } from "../../../components/spinner/Spinner";
+import { Button, Input } from "../../../components/ui";
 import {
   getAllRuntimeConfig,
   migrateIniToDbIfNeeded,
@@ -238,7 +239,7 @@ export function ConfigPage() {
                     <HelpHint text={field.help} />
                   </span>
                   <div className="flex gap-2">
-                    <input
+                    <Input
                       type={field.kind === "secret" ? "password" : "text"}
                       value={cfg[field.key] ?? ""}
                       onChange={(e) => setField(field.key, e.target.value)}
@@ -249,31 +250,26 @@ export function ConfigPage() {
                             ? ".zip, .7z"
                             : "Selecione um caminho"
                       }
-                      className="min-w-0 flex-1 rounded-lg border border-zinc-700 bg-zinc-800 px-3 py-2 outline-none focus:border-emerald-400"
+                      className="min-w-0 flex-1"
                     />
                     {field.kind === "folder" || field.kind === "file" ? (
-                      <button
-                        type="button"
+                      <Button
+                        variant="secondary"
                         onClick={() => void pickPath(field)}
-                        className="flex shrink-0 items-center gap-2 rounded-lg border border-zinc-600 bg-zinc-800 px-4 py-2 font-semibold hover:border-emerald-400"
+                        className="shrink-0"
                       >
                         <FolderOpen className="h-4 w-4" /> Selecionar
-                      </button>
+                      </Button>
                     ) : null}
                   </div>
                 </label>
               ))}
 
               <div className="flex items-center gap-3 pt-2">
-                <button
-                  type="button"
-                  onClick={() => void saveConfig()}
-                  disabled={saving}
-                  className="flex items-center gap-2 rounded-lg bg-emerald-500 px-4 py-2 text-sm font-semibold text-zinc-950 hover:bg-emerald-400 disabled:opacity-50"
-                >
+                <Button onClick={() => void saveConfig()} disabled={saving}>
                   <Save className="h-4 w-4" />
                   {saving ? "Salvando..." : "Salvar configurações"}
-                </button>
+                </Button>
                 {cfgMsg ? (
                   <span className="text-sm text-emerald-300">{cfgMsg}</span>
                 ) : null}
@@ -363,20 +359,13 @@ export function ConfigPage() {
             Altere a senha de acesso ao admin.
           </div>
           <div className="mt-3 flex flex-wrap items-center gap-2">
-            <input
+            <Input
               type="password"
               value={pwd}
               onChange={(e) => setPwd(e.target.value)}
               placeholder="Nova senha"
-              className="rounded-lg border border-zinc-700 bg-zinc-800 px-3 py-2 text-sm outline-none focus:border-emerald-400"
             />
-            <button
-              type="button"
-              onClick={() => void changePassword()}
-              className="rounded-lg bg-emerald-500 px-4 py-2 text-sm font-semibold text-zinc-950 hover:bg-emerald-400"
-            >
-              Salvar senha
-            </button>
+            <Button onClick={() => void changePassword()}>Salvar senha</Button>
             {pwdMsg ? (
               <span className="text-sm text-emerald-300">{pwdMsg}</span>
             ) : null}

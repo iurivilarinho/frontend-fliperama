@@ -11,6 +11,7 @@ import {
 } from "recharts";
 import { AdminPageHeader } from "../AdminLayout";
 import { Spinner } from "../../../components/spinner/Spinner";
+import { Button, Select } from "../../../components/ui";
 import {
   getFinancialSummary,
   getPeakHours,
@@ -119,39 +120,32 @@ export function FinancialPage() {
         description="Receita, pagamentos e desempenho. Dados locais do totem (SQLite)."
         actions={
           <div className="flex flex-wrap items-center gap-2">
-            <select
+            <Select
               value={periodDays}
               onChange={(e) => setPeriodDays(Number(e.target.value))}
-              className="rounded-lg border border-zinc-700 bg-zinc-800 px-3 py-2 text-sm outline-none"
             >
               <option value={7}>7 dias</option>
               <option value={14}>14 dias</option>
               <option value={30}>30 dias</option>
               <option value={90}>90 dias</option>
-            </select>
-            <button
-              type="button"
+            </Select>
+            <Button
+              variant="secondary"
               disabled={exporting}
               onClick={() => void handleExport("excel")}
-              className="flex items-center gap-2 rounded-lg border border-zinc-600 bg-zinc-800 px-3 py-2 text-sm font-semibold hover:border-emerald-400 disabled:opacity-50"
             >
               <FileSpreadsheet className="h-4 w-4" /> Excel
-            </button>
-            <button
-              type="button"
+            </Button>
+            <Button
+              variant="secondary"
               disabled={exporting}
               onClick={() => void handleExport("pdf")}
-              className="flex items-center gap-2 rounded-lg border border-zinc-600 bg-zinc-800 px-3 py-2 text-sm font-semibold hover:border-emerald-400 disabled:opacity-50"
             >
               <FileText className="h-4 w-4" /> PDF
-            </button>
-            <button
-              type="button"
-              onClick={() => void load()}
-              className="flex items-center gap-2 rounded-lg border border-zinc-600 bg-zinc-800 px-3 py-2 text-sm font-semibold hover:border-emerald-400"
-            >
+            </Button>
+            <Button variant="secondary" onClick={() => void load()}>
               <RefreshCw className="h-4 w-4" /> Atualizar
-            </button>
+            </Button>
           </div>
         }
       />

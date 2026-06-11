@@ -1,4 +1,5 @@
 import { execute, select } from "./client";
+import { sha256Hex as computeSha256 } from "../sha256";
 
 const ADMIN_PASSWORD_KEY = "admin_password_sha256";
 
@@ -18,12 +19,11 @@ export async function setSetting(key: string, value: string): Promise<void> {
   );
 }
 
+// SHA-256 em JS puro (services/sha256). NÃO usa crypto.subtle, que só existe em
+// contexto seguro (HTTPS/localhost) — no acesso remoto via http://<ip> ele é
+// undefined e quebrava o login ("banco indisponível").
 async function sha256Hex(text: string): Promise<string> {
-  const data = new TextEncoder().encode(text);
-  const digest = await crypto.subtle.digest("SHA-256", data);
-  return Array.from(new Uint8Array(digest))
-    .map((b) => b.toString(16).padStart(2, "0"))
-    .join("");
+  return computeSha256(text);
 }
 
 /** Se já existe uma senha de admin definida (primeira execução define uma). */

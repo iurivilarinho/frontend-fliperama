@@ -109,11 +109,27 @@ async function applyToRetroArch(
   };
   for (const [k, val] of Object.entries(kb)) ours.set(k, val);
 
-  // Trava de totem: desabilita atalhos que mudam a janela/atrapalham o jogo.
-  ours.set("input_toggle_fullscreen", "nul");
-  ours.set("input_screenshot", "nul");
-  ours.set("input_state_slot_increase", "nul");
-  ours.set("input_state_slot_decrease", "nul");
+  // Trava de totem: desabilita atalhos do RetroArch que ROUBAM teclas do jogador
+  // (frame advance, fast-forward, rewind, etc.). Como input_enable_hotkey = nul,
+  // esses atalhos ficam sempre ativos e, por padrão, usam letras (k, l, espaço...)
+  // que colidem com os botões do jogo. Desligando-os, as teclas só fazem o jogo.
+  for (const hk of [
+    "input_toggle_fullscreen",
+    "input_screenshot",
+    "input_state_slot_increase",
+    "input_state_slot_decrease",
+    "input_frame_advance",
+    "input_hold_fast_forward",
+    "input_toggle_fast_forward",
+    "input_rewind",
+    "input_reset",
+    "input_load_state",
+    "input_save_state",
+    "input_hold_slowmotion",
+    "input_toggle_slowmotion",
+  ]) {
+    ours.set(hk, "nul");
+  }
 
   const keys = new Set(ours.keys());
   // Remove binds de controle ANTIGOS (botão/eixo) para não sobrar índice errado

@@ -7,6 +7,7 @@ import {
 } from "../../services/hyperspinPlatformThemesService";
 import { HyperspinThemePreview } from "./HyperspinThemePreview";
 import { HyperspinWheel } from "./HyperspinWheel";
+import { Spinner } from "../../components/spinner/Spinner";
 
 type PlatformSelectionScreenProps = {
   visible?: boolean;
@@ -72,7 +73,7 @@ export function PlatformSelectionScreen({
 
   const [platforms, setPlatforms] = useState<HyperspinPlatformTheme[]>([]);
   const [selectedIndex, setSelectedIndex] = useState(0);
-  const [loadingPlatforms, setLoadingPlatforms] = useState(false);
+  const [loadingPlatforms, setLoadingPlatforms] = useState(true);
   const [platformsError, setPlatformsError] = useState<string | null>(null);
   const [searchTerm, setSearchTerm] = useState("");
   const [searchVisible, setSearchVisible] = useState(false);
@@ -273,8 +274,11 @@ export function PlatformSelectionScreen({
       ) : null}
 
       {loadingPlatforms ? (
-        <div className="absolute inset-0 z-30 flex items-center justify-center text-sm text-zinc-300">
-          Lendo plataformas...
+        <div className="absolute inset-0 z-40 flex flex-col items-center justify-center gap-4 bg-zinc-950">
+          <Spinner className="size-12 text-emerald-400" />
+          <span className="text-sm font-medium text-zinc-400">
+            Carregando plataformas...
+          </span>
         </div>
       ) : platformsError ? (
         <div className="absolute inset-0 z-30 flex items-center justify-center px-6 text-center text-sm text-red-500">

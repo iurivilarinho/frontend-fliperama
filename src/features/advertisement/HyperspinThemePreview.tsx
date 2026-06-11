@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useHyperspinTheme } from "../../app/provider/HyperspinThemeProvider";
 import type { HyperspinThemeLayer } from "../../types/hyperspinTheme";
+import { Spinner } from "../../components/spinner/Spinner";
 
 type ViewportSize = {
   width: number;
@@ -112,12 +113,12 @@ export function HyperspinThemePreview({
     return (
       <div
         className={[
-          "flex h-full w-full items-center justify-center text-zinc-400",
+          "flex h-full w-full items-center justify-center",
           baseBackgroundClass,
           className,
         ].join(" ")}
       >
-        Carregando theme...
+        <Spinner className="size-10 text-emerald-400" />
       </div>
     );
   }

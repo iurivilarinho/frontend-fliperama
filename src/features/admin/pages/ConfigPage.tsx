@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { open } from "@tauri-apps/plugin-dialog";
 import { FolderOpen, Save, HelpCircle } from "lucide-react";
 import { AdminPageHeader } from "../AdminLayout";
@@ -47,11 +47,24 @@ function Toggle({
   );
 }
 
-/** Ícone "?" que mostra/esconde a descrição do campo ao clicar. */
+/** Ícone "?" que mostra/esconde a descrição do campo ao clicar. Fecha ao clicar fora. */
 function HelpHint({ text }: { text: string }) {
   const [open, setOpen] = useState(false);
+  const ref = useRef<HTMLSpanElement>(null);
+
+  useEffect(() => {
+    if (!open) return;
+    const onDoc = (e: MouseEvent) => {
+      if (ref.current && !ref.current.contains(e.target as Node)) {
+        setOpen(false);
+      }
+    };
+    document.addEventListener("mousedown", onDoc);
+    return () => document.removeEventListener("mousedown", onDoc);
+  }, [open]);
+
   return (
-    <span className="relative inline-flex align-middle">
+    <span ref={ref} className="relative inline-flex align-middle">
       <button
         type="button"
         aria-label="Ajuda"
@@ -80,44 +93,8 @@ const FIELDS: FieldDef[] = [
   {
     key: "hyperspinBasePath",
     label: "Pasta raiz dos dados",
-    help: "Pasta principal que contém Emulators, Media e Databases (ex.: D:\\HD\\fliperama-data). É a base de onde tudo é resolvido.",
+    help: "Pasta principal que contém Emulators, Media e Databases (ex.: D:\\HD\\fliperama-data). É a ÚNICA pasta que você informa — o resto (MAME, mídia, bancos, temas) é resolvido automaticamente a partir dela.",
     kind: "folder",
-  },
-  {
-    key: "databasePath",
-    label: "Pasta de bancos (Databases)",
-    help: "Onde ficam os XMLs de cada plataforma (lista de jogos). Normalmente <raiz>\\Databases.",
-    kind: "folder",
-  },
-  {
-    key: "mediaBasePath",
-    label: "Pasta de mídia (Media)",
-    help: "Onde ficam as artes (Wheel/Snap), vídeos e temas das plataformas. Normalmente <raiz>\\Media.",
-    kind: "folder",
-  },
-  {
-    key: "themesBasePath",
-    label: "Pasta de temas",
-    help: "Base dos temas de menu do totem. Em geral é a mesma pasta de Media.",
-    kind: "folder",
-  },
-  {
-    key: "emulatorPath",
-    label: "Emulador MAME (mame.exe)",
-    help: "Caminho do executável do MAME, usado para os jogos de arcade. Os demais emuladores (RetroArch, RPCS3, PCSX2) são resolvidos automaticamente dentro de Emulators.",
-    kind: "file",
-  },
-  {
-    key: "romsDir",
-    label: "Pasta de ROMs do MAME",
-    help: "Pasta com as ROMs de arcade do MAME (arquivos .zip/.7z por nome curto).",
-    kind: "folder",
-  },
-  {
-    key: "acceptedRomExtensions",
-    label: "Extensões de ROM padrão",
-    help: "Extensões aceitas por padrão no MAME, separadas por vírgula (ex.: .zip, .7z). Cada plataforma do catálogo tem as suas próprias.",
-    kind: "text",
   },
   {
     key: "mercadoPagoToken",

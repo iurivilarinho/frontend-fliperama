@@ -7,6 +7,7 @@ import {
   type HyperspinGame,
 } from "../../services/hyperspinGamesService";
 import { launchSelectedGame } from "../../services/emulatorLauncher";
+import { Spinner } from "../../components/spinner/Spinner";
 import { usePlaySession } from "./session/PlaySessionContext";
 import { HyperspinWheel } from "./HyperspinWheel";
 import { recordGameLaunch } from "../../services/db/usage";
@@ -90,7 +91,7 @@ export function GamesPage() {
 
   const [games, setGames] = useState<HyperspinGame[]>([]);
   const [selectedIndex, setSelectedIndex] = useState(0);
-  const [loadingGames, setLoadingGames] = useState(false);
+  const [loadingGames, setLoadingGames] = useState(true);
   const [gamesError, setGamesError] = useState<string | null>(null);
   const [searchTerm, setSearchTerm] = useState("");
   const [searchVisible, setSearchVisible] = useState(false);
@@ -514,8 +515,11 @@ export function GamesPage() {
       ) : null}
 
       {loadingGames ? (
-        <div className="absolute inset-0 z-30 flex items-center justify-center text-sm text-zinc-300">
-          Lendo jogos...
+        <div className="absolute inset-0 z-40 flex flex-col items-center justify-center gap-4 bg-zinc-950">
+          <Spinner className="size-12 text-emerald-400" />
+          <span className="text-sm font-medium text-zinc-400">
+            Carregando jogos...
+          </span>
         </div>
       ) : gamesError ? (
         <div className="absolute inset-0 z-30 flex items-center justify-center px-6 text-center text-sm text-red-500">

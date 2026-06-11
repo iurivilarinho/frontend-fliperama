@@ -3,14 +3,6 @@ import {
   migrateIniToDbIfNeeded,
 } from "./runtimeConfig";
 
-function parseList(raw: string | undefined): string[] {
-  if (!raw) return [];
-  return raw
-    .split(",")
-    .map((item) => item.trim())
-    .filter(Boolean);
-}
-
 export type PlatformLaunchProfile = "mame";
 
 export type RuntimeIniConfig = {
@@ -40,37 +32,28 @@ export async function loadRuntimeIniConfig(): Promise<RuntimeIniConfig> {
   await migrateIniToDbIfNeeded();
   const cfg = await getAllRuntimeConfig();
 
-  const emulatorPath = cfg.emulatorPath.trim();
-  const romsDir = cfg.romsDir.trim();
-  const mediaBasePath = cfg.mediaBasePath.trim();
-  const databasePath = cfg.databasePath.trim();
-  const themesBasePath = cfg.themesBasePath.trim();
-  const acceptedRomExtensions = parseList(cfg.acceptedRomExtensions);
-
-  // hyperspinBasePath é a raiz dos dados. Se não vier configurado, derivamos da
-  // pasta pai de databasePath (ex.: ...\fliperama-data\Databases -> ...\fliperama-data).
+  // hyperspinBasePath é a raiz dos dados (ÚNICO caminho que o usuário informa).
+  // Se não vier, derivamos da pasta pai de um databasePath legado.
   const hyperspinBasePath =
     cfg.hyperspinBasePath.trim() ||
-    (databasePath ? getParentDirectory(databasePath) : "");
+    (cfg.databasePath?.trim()
+      ? getParentDirectory(cfg.databasePath.trim())
+      : "");
 
-  if (!emulatorPath) {
-    throw new Error(`Caminho do emulador (MAME) não configurado. ${CONFIG_HINT}`);
+  if (!hyperspinBasePath) {
+    throw new Error(`Pasta raiz dos dados não configurada. ${CONFIG_HINT}`);
   }
-  if (!romsDir) {
-    throw new Error(`Pasta de ROMs não configurada. ${CONFIG_HINT}`);
-  }
-  if (!mediaBasePath) {
-    throw new Error(`Pasta de mídia não configurada. ${CONFIG_HINT}`);
-  }
-  if (!databasePath) {
-    throw new Error(`Pasta de banco de dados não configurada. ${CONFIG_HINT}`);
-  }
-  if (!themesBasePath) {
-    throw new Error(`Pasta de temas não configurada. ${CONFIG_HINT}`);
-  }
-  if (acceptedRomExtensions.length === 0) {
-    throw new Error(`Extensões de ROM não configuradas. ${CONFIG_HINT}`);
-  }
+
+  // Tudo abaixo é DERIVADO da raiz (não precisa de parâmetro próprio). Mantemos o
+  // valor do banco se existir (compatibilidade), senão montamos a partir da raiz.
+  const databasePath =
+    cfg.databasePath?.trim() || `${hyperspinBasePath}\\Databases`;
+  const mediaBasePath = cfg.mediaBasePath?.trim() || `${hyperspinBasePath}\\Media`;
+  const themesBasePath =
+    cfg.themesBasePath?.trim() || `${hyperspinBasePath}\\Media`;
+  const emulatorPath = `${hyperspinBasePath}\\Emulators\\MAME\\mame.exe`;
+  const romsDir = `${hyperspinBasePath}\\Emulators\\MAME\\roms`;
+  const acceptedRomExtensions = [".zip", ".7z"];
 
   return {
     iniPath: CONFIG_HINT,

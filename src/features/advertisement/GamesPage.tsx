@@ -8,6 +8,8 @@ import {
 } from "../../services/hyperspinGamesService";
 import { launchSelectedGame } from "../../services/emulatorLauncher";
 import { Spinner } from "../../components/spinner/Spinner";
+import { VirtualKeyboard } from "./VirtualKeyboard";
+import { loadSelectedPreset } from "../../services/db/controls";
 import { usePlaySession } from "./session/PlaySessionContext";
 import { HyperspinWheel } from "./HyperspinWheel";
 import { recordGameLaunch } from "../../services/db/usage";
@@ -103,8 +105,15 @@ export function GamesPage() {
   const [filterMode, setFilterMode] = useState<FilterMode>("all");
   const [genreFilter, setGenreFilter] = useState<string>("all");
   const [sortMode, setSortMode] = useState<SortMode>("az");
+  // Modo arcade/fliperama: sem teclado físico -> mostra teclado virtual na busca.
+  const [arcadeMode, setArcadeMode] = useState(false);
+  const [keyboardOpen, setKeyboardOpen] = useState(false);
 
   const searchInputRef = useRef<HTMLInputElement | null>(null);
+
+  useEffect(() => {
+    void loadSelectedPreset().then((p) => setArcadeMode(p === "fliperama"));
+  }, []);
 
   const loadStats = useCallback(async () => {
     if (!platform) return;
@@ -320,6 +329,7 @@ export function GamesPage() {
 
         event.preventDefault();
         setSearchVisible(true);
+        if (arcadeMode) setKeyboardOpen(true);
         return;
       }
 
@@ -393,6 +403,7 @@ export function GamesPage() {
     launchGame,
     keyboardUnlockAt,
     toggleFavorite,
+    arcadeMode,
   ]);
 
   if (!canPlay) {
@@ -496,15 +507,23 @@ export function GamesPage() {
       </div>
 
       {searchVisible ? (
-        <div className="absolute left-1/2 top-6 z-40 -translate-x-1/2">
+        <div className="absolute left-1/2 top-6 z-40 w-[min(90vw,560px)] -translate-x-1/2">
           <input
             ref={searchInputRef}
             type="text"
             value={searchTerm}
+            readOnly={arcadeMode && keyboardOpen}
             onChange={(event) => setSearchTerm(event.target.value)}
             placeholder="Filtrar jogo..."
             className="w-full rounded-xl border border-zinc-700 bg-black/75 px-4 py-3 text-sm text-white outline-none backdrop-blur-md placeholder:text-zinc-500 focus:border-zinc-500"
           />
+          {arcadeMode && keyboardOpen ? (
+            <VirtualKeyboard
+              onChar={(c) => setSearchTerm((t) => t + c)}
+              onBackspace={() => setSearchTerm((t) => t.slice(0, -1))}
+              onDone={() => setKeyboardOpen(false)}
+            />
+          ) : null}
         </div>
       ) : null}
 

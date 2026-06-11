@@ -38,3 +38,19 @@ export async function loadInGameMapping(): Promise<InGameMapping> {
 export async function saveInGameMapping(mapping: InGameMapping): Promise<void> {
   await setSetting(INGAME_KEY, JSON.stringify(mapping));
 }
+
+const NUM_PLAYERS_KEY = "num_players";
+
+export async function loadNumPlayers(): Promise<number> {
+  try {
+    const raw = await getSetting(NUM_PLAYERS_KEY);
+    const n = raw ? parseInt(raw, 10) : 1;
+    return Math.min(4, Math.max(1, Number.isFinite(n) ? n : 1));
+  } catch {
+    return 1;
+  }
+}
+
+export async function saveNumPlayers(n: number): Promise<void> {
+  await setSetting(NUM_PLAYERS_KEY, String(Math.min(4, Math.max(1, n))));
+}

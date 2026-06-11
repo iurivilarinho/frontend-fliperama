@@ -3,6 +3,7 @@ import { Gamepad2, RefreshCw, Wrench } from "lucide-react";
 import { AdminPageHeader } from "../AdminLayout";
 import {
   CONTROL_ACTIONS,
+  CONTROL_PRESETS,
   CONTROLLER_LABEL,
   DEFAULT_INGAME_MAPPING,
   DEFAULT_MAPPING,
@@ -16,8 +17,10 @@ import {
 import {
   loadControlMapping,
   loadInGameMapping,
+  loadNumPlayers,
   saveControlMapping,
   saveInGameMapping,
+  saveNumPlayers,
 } from "../../../services/db/controls";
 import {
   applyInGameMapping,
@@ -30,6 +33,7 @@ export function ControlsPage() {
   const [nav, setNav] = useState<ControlMapping>(DEFAULT_MAPPING);
   const [ingame, setIngame] = useState<InGameMapping>(DEFAULT_INGAME_MAPPING);
   const [binding, setBinding] = useState<string | null>(null); // "nav:up" | "ingame:south"
+  const [numPlayers, setNumPlayers] = useState(1);
   const [applying, setApplying] = useState(false);
   const [applyResult, setApplyResult] = useState<ApplyResult | null>(null);
 
@@ -44,6 +48,25 @@ export function ControlsPage() {
   useEffect(() => {
     void loadControlMapping().then(setNav);
     void loadInGameMapping().then(setIngame);
+    void loadNumPlayers().then(setNumPlayers);
+  }, []);
+
+  const applyPreset = useCallback(
+    async (presetId: string) => {
+      const preset = CONTROL_PRESETS.find((p) => p.id === presetId);
+      if (!preset) return;
+      setNav(preset.nav);
+      setIngame(preset.ingame);
+      await saveControlMapping(preset.nav);
+      await saveInGameMapping(preset.ingame);
+      window.dispatchEvent(new Event("controls-updated"));
+    },
+    [],
+  );
+
+  const changeNumPlayers = useCallback(async (n: number) => {
+    setNumPlayers(n);
+    await saveNumPlayers(n);
   }, []);
 
   const persistNav = useCallback(async (next: ControlMapping) => {
@@ -97,7 +120,7 @@ export function ControlsPage() {
     setApplying(true);
     setApplyResult(null);
     try {
-      setApplyResult(await applyInGameMapping(ingame));
+      setApplyResult(await applyInGameMapping(ingame, numPlayers));
     } catch (e) {
       console.error(e);
       setApplyResult({ applied: [], skipped: ["Erro ao gerar configs"] });
@@ -173,6 +196,26 @@ export function ControlsPage() {
           </div>
         </div>
 
+        {/* presets */}
+        <div>
+          <h2 className="mb-2 text-sm font-bold uppercase tracking-wide text-zinc-300">
+            Presets
+          </h2>
+          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-4">
+            {CONTROL_PRESETS.map((p) => (
+              <button
+                key={p.id}
+                type="button"
+                onClick={() => void applyPreset(p.id)}
+                className="rounded-xl border border-zinc-700 bg-zinc-900/40 p-4 text-left transition hover:border-emerald-400"
+              >
+                <div className="font-semibold">{p.label}</div>
+                <div className="mt-1 text-xs text-zinc-500">{p.description}</div>
+              </button>
+            ))}
+          </div>
+        </div>
+
         {/* navegação do totem */}
         <div>
           <div className="mb-2 flex items-center justify-between">
@@ -214,7 +257,21 @@ export function ControlsPage() {
             <h2 className="text-sm font-bold uppercase tracking-wide text-zinc-300">
               Dentro do jogo (emuladores)
             </h2>
-            <div className="flex gap-2">
+            <div className="flex items-center gap-2">
+              <label className="flex items-center gap-2 text-xs text-zinc-400">
+                Jogadores
+                <select
+                  value={numPlayers}
+                  onChange={(e) => void changeNumPlayers(Number(e.target.value))}
+                  className="rounded-lg border border-zinc-700 bg-zinc-800 px-2 py-1 text-xs"
+                >
+                  {[1, 2, 3, 4].map((n) => (
+                    <option key={n} value={n}>
+                      {n}
+                    </option>
+                  ))}
+                </select>
+              </label>
               <button
                 type="button"
                 onClick={() => void resetIngame()}
@@ -270,9 +327,11 @@ export function ControlsPage() {
 
           <p className="mt-3 text-xs text-zinc-500">
             "Aplicar" gera o config do RetroArch (10 plataformas, confiável) e do
-            MAME (best-effort, com backup do default.cfg). Os emuladores
-            standalone (Project64, Nestopia, ZSNES, Fusion) usam o próprio menu de
-            input e geralmente já auto-detectam o controle.
+            MAME (best-effort, com backup do default.cfg) para os{" "}
+            <span className="text-zinc-300">{numPlayers} jogador(es)</span> —
+            cada um num controle (P1 = controle 0, P2 = controle 1...). Os
+            emuladores standalone (Project64, Nestopia, ZSNES, Fusion) usam o
+            próprio menu de input e geralmente já auto-detectam o controle.
           </p>
         </div>
       </div>

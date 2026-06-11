@@ -94,6 +94,68 @@ export const DEFAULT_INGAME_MAPPING: InGameMapping = {
   right: 15,
 };
 
+// ── Presets prontos (a pessoa escolhe e ajusta se quiser) ──────────────────
+export type ControlPreset = {
+  id: string;
+  label: string;
+  description: string;
+  nav: ControlMapping;
+  ingame: InGameMapping;
+};
+
+// Xbox, PlayStation e PC compartilham o "Standard Gamepad" (o Chromium
+// normaliza os índices): ✕/A=0, ○/B=1, □/X=2, △/Y=3. Mudam os rótulos, não os
+// índices. O Fliperama (encoder de arcade) costuma diferir e quase sempre
+// precisa de ajuste fino.
+export const CONTROL_PRESETS: ControlPreset[] = [
+  {
+    id: "pc",
+    label: "PC (teclado + gamepad)",
+    description:
+      "Layout padrão. O teclado já funciona nativo (setas/Enter/Esc); se plugar um gamepad, usa este layout.",
+    nav: { ...DEFAULT_MAPPING },
+    ingame: { ...DEFAULT_INGAME_MAPPING },
+  },
+  {
+    id: "xbox",
+    label: "Xbox",
+    description: "A = confirmar, B = voltar. Layout padrão do controle Xbox.",
+    nav: { ...DEFAULT_MAPPING },
+    ingame: { ...DEFAULT_INGAME_MAPPING },
+  },
+  {
+    id: "playstation",
+    label: "PlayStation",
+    description:
+      "✕ = confirmar, ○ = voltar. Mesmos índices do padrão (DualShock/DualSense normalizados).",
+    nav: { ...DEFAULT_MAPPING },
+    ingame: { ...DEFAULT_INGAME_MAPPING },
+  },
+  {
+    id: "fliperama",
+    label: "Fliperama (arcade)",
+    description:
+      "Encoder de arcade (zero-delay): 6 botões + start/coin. Confira com 'aperte para vincular' — encoders variam.",
+    nav: { confirm: 1, back: 2, favorite: 0, search: 3, up: 12, down: 13, left: 14, right: 15 },
+    ingame: {
+      south: 1,
+      east: 2,
+      west: 0,
+      north: 3,
+      l1: 4,
+      r1: 5,
+      l2: 6,
+      r2: 7,
+      select: 8, // coin
+      start: 9,
+      up: 12,
+      down: 13,
+      left: 14,
+      right: 15,
+    },
+  },
+];
+
 export function detectControllerType(id: string): ControllerType {
   const s = id.toLowerCase();
   if (

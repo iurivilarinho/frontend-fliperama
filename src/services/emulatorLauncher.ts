@@ -47,10 +47,11 @@ export async function launchSelectedGame(params: {
     return;
   }
 
-  // Perfil genérico: emuladores que recebem o caminho da ROM como argumento
-  // (Project64, Nestopia, ZSNES, Kega Fusion, etc.).
+  // Perfil genérico: emuladores standalone que recebem o caminho da ROM como
+  // argumento, com argumentos extras opcionais (ex.: PCSX2 -batch -fullscreen).
   await invoke("launch_generic", {
     emulatorPath: runtimeConfig.emulatorPath,
     romPath: params.romPath,
+    args: runtimeConfig.launchArgs,
   });
 }

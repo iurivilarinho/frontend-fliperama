@@ -127,7 +127,11 @@ fn launch_mame(mame_path: String, rom_name: String, roms_dir: String) -> Result<
     Ok(())
 }
 #[tauri::command]
-fn launch_generic(emulator_path: String, rom_path: String) -> Result<(), String> {
+fn launch_generic(
+    emulator_path: String,
+    rom_path: String,
+    args: Option<Vec<String>>,
+) -> Result<(), String> {
     let emulator_exists = Path::new(&emulator_path).exists();
     let rom_exists = Path::new(&rom_path).exists();
 
@@ -149,8 +153,12 @@ fn launch_generic(emulator_path: String, rom_path: String) -> Result<(), String>
             )
         })?;
 
-    Command::new(&emulator_path)
-        .current_dir(&emulator_dir)
+    let mut command = Command::new(&emulator_path);
+    command.current_dir(&emulator_dir);
+    for arg in args.unwrap_or_default() {
+        command.arg(arg);
+    }
+    command
         .arg(&rom_path)
         .spawn()
         .map_err(|e| {

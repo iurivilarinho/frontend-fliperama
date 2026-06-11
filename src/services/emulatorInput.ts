@@ -50,6 +50,11 @@ async function applyToRetroArch(
     ours.set(`input_player${p}_joypad_index`, String(p - 1));
   }
 
+  // Tela cheia (totem) + sair do RetroArch com o botão de menu não fecha sozinho.
+  ours.set("video_fullscreen", "true");
+  ours.set("video_windowed_fullscreen", "true");
+  ours.set("pause_nonactive", "false");
+
   const keys = new Set(ours.keys());
   const kept = lines.filter((l) => {
     const k = l.split("=")[0]?.trim();

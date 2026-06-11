@@ -27,6 +27,12 @@ export type PlatformCatalogEntry = {
    * Obrigatório para launchProfile "retroarch".
    */
   coreRelativePath?: string;
+  /**
+   * Argumentos extras passados ANTES do caminho da ROM no perfil "generic"
+   * (ex.: PCSX2 ["-batch","-fullscreen"], RPCS3 ["--no-gui"]). Útil para
+   * emuladores standalone abrirem em tela cheia / sem GUI.
+   */
+  launchArgs?: string[];
   launchProfile: LaunchProfile;
   /** Extensões de ROM aceitas para esta plataforma. */
   romExtensions: string[];
@@ -58,39 +64,45 @@ export const PLATFORM_CATALOG: Record<string, PlatformCatalogEntry> = {
   },
   "Nintendo 64": {
     romsRelativePath: "Emulators/Nintendo 64/Roms",
-    emulatorRelativePath: "Emulators/Nintendo 64/Project64.exe",
-    launchProfile: "generic",
-    romExtensions: [".zip", ".z64", ".n64", ".v64"],
+    emulatorRelativePath: RA_EXE,
+    coreRelativePath: RA_CORE("mupen64plus_next"),
+    launchProfile: "retroarch",
+    romExtensions: [".z64", ".n64", ".v64", ".zip"],
   },
   "Nintendo Entertainment System": {
     romsRelativePath: "Emulators/Nintendo Entertainment System/Roms",
-    emulatorRelativePath: "Emulators/Nintendo Entertainment System/nestopia.exe",
-    launchProfile: "generic",
+    emulatorRelativePath: RA_EXE,
+    coreRelativePath: RA_CORE("fceumm"),
+    launchProfile: "retroarch",
     romExtensions: [".nes", ".zip"],
   },
   "Super Nintendo Entertainment System": {
     romsRelativePath: "Emulators/Super Nintendo Entertainment System/roms",
-    emulatorRelativePath: "Emulators/Super Nintendo Entertainment System/zsnesw.exe",
-    launchProfile: "generic",
-    romExtensions: [".zip", ".smc", ".sfc"],
+    emulatorRelativePath: RA_EXE,
+    coreRelativePath: RA_CORE("snes9x"),
+    launchProfile: "retroarch",
+    romExtensions: [".smc", ".sfc", ".zip"],
   },
   "Sega Genesis": {
     romsRelativePath: "Emulators/Sega/roms megadrive",
-    emulatorRelativePath: "Emulators/Sega/Fusion.exe",
-    launchProfile: "generic",
-    romExtensions: [".zip", ".bin", ".gen", ".md", ".smd"],
+    emulatorRelativePath: RA_EXE,
+    coreRelativePath: RA_CORE("genesis_plus_gx"),
+    launchProfile: "retroarch",
+    romExtensions: [".md", ".bin", ".gen", ".smd", ".zip"],
   },
   "Sega Master System": {
     romsRelativePath: "Emulators/Sega/roms master system",
-    emulatorRelativePath: "Emulators/Sega/Fusion.exe",
-    launchProfile: "generic",
-    romExtensions: [".zip", ".sms"],
+    emulatorRelativePath: RA_EXE,
+    coreRelativePath: RA_CORE("genesis_plus_gx"),
+    launchProfile: "retroarch",
+    romExtensions: [".sms", ".zip"],
   },
   "Sega 32X": {
     romsRelativePath: "Emulators/Sega/roms Sega32x",
-    emulatorRelativePath: "Emulators/Sega/Fusion.exe",
-    launchProfile: "generic",
-    romExtensions: [".zip", ".32x"],
+    emulatorRelativePath: RA_EXE,
+    coreRelativePath: RA_CORE("picodrive"),
+    launchProfile: "retroarch",
+    romExtensions: [".32x", ".bin", ".zip"],
   },
 
   // ── Plataformas via RetroArch (cores libretro) ──
@@ -174,6 +186,7 @@ export type ResolvedPlatformConfig = {
   romsDir: string;
   emulatorPath: string;
   corePath: string | null;
+  launchArgs: string[];
   launchProfile: LaunchProfile;
   romExtensions: string[];
 };
@@ -215,6 +228,7 @@ export async function resolvePlatformConfig(
     romsDir,
     emulatorPath,
     corePath,
+    launchArgs: entry.launchArgs ?? [],
     launchProfile: entry.launchProfile,
     romExtensions: entry.romExtensions,
   };

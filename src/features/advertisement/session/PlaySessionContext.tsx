@@ -31,6 +31,11 @@ import { getPaymentEnabled } from "../../../services/db/settings";
 const DEFAULT_MINUTES_OPTIONS = [5, 10, 15] as const;
 const SESSION_STORAGE_KEY = "arcade-play-session";
 
+// Fora do Tauri (navegador remoto acessando o painel pela rede) as APIs de
+// janela/overlay/timer não existem — chamá-las quebra a tela. Guardamos com isto.
+const isTauri =
+  typeof window !== "undefined" && "__TAURI_INTERNALS__" in window;
+
 export type SessionPaymentInfo = {
   amountCents: number;
   providerId?: string | null;
@@ -54,6 +59,7 @@ type PlaySessionContextValue = {
 const PlaySessionContext = createContext<PlaySessionContextValue | null>(null);
 
 async function pinMiniOverlayWindow() {
+  if (!isTauri) return;
   await invoke("ensure_overlay_mini_window");
   const overlayMini = await WebviewWindow.getByLabel("overlay_mini");
   if (!overlayMini) return;
@@ -63,6 +69,7 @@ async function pinMiniOverlayWindow() {
 }
 
 async function closeMiniOverlayWindow() {
+  if (!isTauri) return;
   await invoke("close_overlay_mini_window");
 }
 
@@ -140,7 +147,7 @@ export function PlaySessionProvider({ children }: { children: ReactNode }) {
       clearPersistedSession();
     }
     // Após refresh/reconexão com sessão ativa, reagenda o timer garantido.
-    if (initial.status === "active" && initial.remainingSeconds > 0) {
+    if (isTauri && initial.status === "active" && initial.remainingSeconds > 0) {
       void invoke("start_session_timer", {
         remainingSecs: initial.remainingSeconds,
       }).catch(() => {});
@@ -165,9 +172,11 @@ export function PlaySessionProvider({ children }: { children: ReactNode }) {
 
       // Timer garantido no backend (Rust): encerra o emulador no horário exato,
       // mesmo se o app perder o foco e o timer do webview for estrangulado.
-      void invoke("start_session_timer", { remainingSecs: minutes * 60 }).catch(
-        () => {},
-      );
+      if (isTauri) {
+        void invoke("start_session_timer", {
+          remainingSecs: minutes * 60,
+        }).catch(() => {});
+      }
 
       void createSession({
         durationMinutes: minutes,
@@ -191,7 +200,7 @@ export function PlaySessionProvider({ children }: { children: ReactNode }) {
     if (status === "active") {
       void markSessionStatus(sessionIdRef.current, "ended");
     }
-    void invoke("cancel_session_timer").catch(() => {});
+    if (isTauri) void invoke("cancel_session_timer").catch(() => {});
     setStatus("idle");
     setRemainingSeconds(0);
     setSelectedDurationMinutes(null);
@@ -208,7 +217,7 @@ export function PlaySessionProvider({ children }: { children: ReactNode }) {
     setStatus("expired");
     setRemainingSeconds(0);
     void markSessionStatus(sessionIdRef.current, "expired");
-    void backupSaves();
+    if (isTauri) void backupSaves();
     clearPersistedSession();
   }, []);
 
@@ -240,6 +249,7 @@ export function PlaySessionProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     if (isMiniOverlayWindow) return;
 
+    if (!isTauri) return;
     let unlisten: (() => void) | undefined;
     listen("session-expired", () => {
       handleExpiry();
@@ -264,7 +274,7 @@ export function PlaySessionProvider({ children }: { children: ReactNode }) {
   }, [isMiniOverlayWindow, isSessionActive]);
 
   useEffect(() => {
-    if (isMiniOverlayWindow) return;
+    if (isMiniOverlayWindow || !isTauri) return;
     const main = getCurrentWindow();
     main.setAlwaysOnTop(!isSessionActive).catch(() => {});
   }, [isMiniOverlayWindow, isSessionActive]);

@@ -81,3 +81,33 @@ export async function getPaymentEnabled(): Promise<boolean> {
 export async function setPaymentEnabled(value: boolean): Promise<void> {
   await setSetting(PAYMENT_ENABLED_KEY, value ? "true" : "false");
 }
+
+const CRT_SHADER_KEY = "crt_shader_enabled";
+
+/** Liga o shader CRT (scanlines/curvatura) nos jogos via RetroArch. Padrão: off. */
+export async function getCrtShaderEnabled(): Promise<boolean> {
+  try {
+    return (await getSetting(CRT_SHADER_KEY)) === "true";
+  } catch {
+    return false;
+  }
+}
+
+export async function setCrtShaderEnabled(value: boolean): Promise<void> {
+  await setSetting(CRT_SHADER_KEY, value ? "true" : "false");
+}
+
+const BEZEL_KEY = "bezel_enabled";
+
+/** Liga a moldura (bezel) em volta do jogo no RetroArch. Padrão: off. */
+export async function getBezelEnabled(): Promise<boolean> {
+  try {
+    return (await getSetting(BEZEL_KEY)) === "true";
+  } catch {
+    return false;
+  }
+}
+
+export async function setBezelEnabled(value: boolean): Promise<void> {
+  await setSetting(BEZEL_KEY, value ? "true" : "false");
+}

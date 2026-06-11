@@ -3,12 +3,17 @@ import { open } from "@tauri-apps/plugin-dialog";
 import { FolderOpen, Save, HelpCircle } from "lucide-react";
 import { AdminPageHeader } from "../AdminLayout";
 import {
+  getBezelEnabled,
+  getCrtShaderEnabled,
   getPaymentEnabled,
   getShowWithoutRoms,
   setAdminPassword,
+  setBezelEnabled,
+  setCrtShaderEnabled,
   setPaymentEnabled,
   setShowWithoutRoms,
 } from "../../../services/db/settings";
+import { applySavedInGameMapping } from "../../../services/emulatorInput";
 import {
   getAllRuntimeConfig,
   migrateIniToDbIfNeeded,
@@ -125,6 +130,8 @@ const FIELDS: FieldDef[] = [
 export function ConfigPage() {
   const [showWithoutRoms, setShowState] = useState(false);
   const [paymentEnabled, setPaymentState] = useState(true);
+  const [crtShader, setCrtState] = useState(false);
+  const [bezel, setBezelState] = useState(false);
   const [loading, setLoading] = useState(true);
   const [pwd, setPwd] = useState("");
   const [pwdMsg, setPwdMsg] = useState<string | null>(null);
@@ -142,6 +149,8 @@ export function ConfigPage() {
       await migrateIniToDbIfNeeded();
       setShowState(await getShowWithoutRoms());
       setPaymentState(await getPaymentEnabled());
+      setCrtState(await getCrtShaderEnabled());
+      setBezelState(await getBezelEnabled());
       setCfg(await getAllRuntimeConfig());
     } finally {
       setLoading(false);
@@ -162,6 +171,18 @@ export function ConfigPage() {
     await setPaymentEnabled(v);
     // Aplica no totem sem precisar reiniciar.
     window.dispatchEvent(new Event("payment-config-updated"));
+  };
+
+  const toggleCrt = async (v: boolean) => {
+    setCrtState(v);
+    await setCrtShaderEnabled(v);
+    await applySavedInGameMapping().catch(() => {});
+  };
+
+  const toggleBezel = async (v: boolean) => {
+    setBezelState(v);
+    await setBezelEnabled(v);
+    await applySavedInGameMapping().catch(() => {});
   };
 
   const changePassword = async () => {
@@ -302,6 +323,41 @@ export function ConfigPage() {
               checked={paymentEnabled}
               onChange={(v) => void togglePayment(v)}
             />
+          )}
+        </div>
+
+        {/* Visual dos jogos: shader CRT + bezel */}
+        <div className="flex items-center justify-between rounded-xl border border-zinc-800 bg-zinc-900/40 p-5">
+          <div>
+            <div className="flex items-center font-semibold">
+              Shader CRT (scanlines)
+              <HelpHint text="Aplica um filtro de TV de tubo (scanlines/curvatura) nos jogos do RetroArch, dando o visual retrô autêntico. Pode pesar um pouco em máquinas fracas. Vale no próximo jogo aberto." />
+            </div>
+            <div className="mt-1 max-w-xl text-sm text-zinc-400">
+              Visual de TV antiga nos jogos (RetroArch).
+            </div>
+          </div>
+          {loading ? (
+            <span className="text-sm text-zinc-500">...</span>
+          ) : (
+            <Toggle checked={crtShader} onChange={(v) => void toggleCrt(v)} />
+          )}
+        </div>
+
+        <div className="flex items-center justify-between rounded-xl border border-zinc-800 bg-zinc-900/40 p-5">
+          <div>
+            <div className="flex items-center font-semibold">
+              Moldura (bezel)
+              <HelpHint text="Mostra uma moldura de arcade em volta do jogo (preenche as laterais pretas da tela), dando aparência de fliperama. Vale no próximo jogo aberto do RetroArch." />
+            </div>
+            <div className="mt-1 max-w-xl text-sm text-zinc-400">
+              Moldura em volta do jogo (preenche as bordas da tela).
+            </div>
+          </div>
+          {loading ? (
+            <span className="text-sm text-zinc-500">...</span>
+          ) : (
+            <Toggle checked={bezel} onChange={(v) => void toggleBezel(v)} />
           )}
         </div>
 

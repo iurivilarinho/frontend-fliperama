@@ -9,6 +9,7 @@ import {
 import { loadRuntimeIniConfig } from "./iniConfig";
 import type { InGameButton, InGameMapping } from "./gamepad";
 import { loadInGameMapping, loadNumPlayers } from "./db/controls";
+import { getBezelEnabled, getCrtShaderEnabled } from "./db/settings";
 
 // RetroArch: sufixo do RetroPad -> botão lógico do nosso mapeamento.
 const RA_BTNS: [string, InGameButton][] = [
@@ -89,6 +90,34 @@ async function applyToRetroArch(
   ours.set("video_fullscreen", "true");
   ours.set("video_windowed_fullscreen", "true");
   ours.set("pause_nonactive", "false");
+
+  // Visual: shader CRT (scanlines) e bezel (moldura). Caminhos com barra normal
+  // (o RetroArch aceita no Windows). Ligados/desligados pelos parâmetros do admin.
+  const raDirSlash = raDir.replace(/\\/g, "/");
+  const [shaderOn, bezelOn] = await Promise.all([
+    getCrtShaderEnabled().catch(() => false),
+    getBezelEnabled().catch(() => false),
+  ]);
+  if (shaderOn) {
+    ours.set("video_shader_enable", "true");
+    ours.set(
+      "video_shader",
+      `${raDirSlash}/shaders/shaders_glsl/crt/crt-easymode.glslp`,
+    );
+  } else {
+    ours.set("video_shader_enable", "false");
+  }
+  if (bezelOn) {
+    ours.set("input_overlay_enable", "true");
+    ours.set(
+      "input_overlay",
+      `${raDirSlash}/overlays/effects/crt-bezels/horizontal.cfg`,
+    );
+    ours.set("input_overlay_opacity", "1.000000");
+    ours.set("input_overlay_hide_in_menu", "false");
+  } else {
+    ours.set("input_overlay_enable", "false");
+  }
 
   // Teclado do jogador 1 — movimento WASD + botões em DIAMANTE (mesma geometria
   // de um controle: cima/esq/baixo/dir = X/Y/B/A), para quem joga no teclado.

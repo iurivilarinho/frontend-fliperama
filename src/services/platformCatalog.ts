@@ -178,6 +178,50 @@ export const PLATFORM_CATALOG: Record<string, PlatformCatalogEntry> = {
     launchProfile: "retroarch",
     romExtensions: [".cue", ".chd", ".iso"],
   },
+
+  // ── Sistemas adicionados do pack HyperSpin AIO (RetroArch) ──
+  "Atari 2600": {
+    romsRelativePath: RA_ROMS("Atari 2600"),
+    emulatorRelativePath: RA_EXE,
+    coreRelativePath: RA_CORE("stella"),
+    launchProfile: "retroarch",
+    romExtensions: [".a26", ".bin", ".zip"],
+  },
+  "Atari 8-bit": {
+    romsRelativePath: RA_ROMS("Atari 8-bit"),
+    emulatorRelativePath: RA_EXE,
+    coreRelativePath: RA_CORE("atari800"),
+    launchProfile: "retroarch",
+    romExtensions: [".atr", ".xex", ".bin", ".car", ".zip"],
+  },
+  ColecoVision: {
+    romsRelativePath: RA_ROMS("ColecoVision"),
+    emulatorRelativePath: RA_EXE,
+    coreRelativePath: RA_CORE("gearcoleco"),
+    launchProfile: "retroarch",
+    romExtensions: [".col", ".bin", ".rom", ".zip"],
+  },
+  "Commodore 64": {
+    romsRelativePath: RA_ROMS("Commodore 64"),
+    emulatorRelativePath: RA_EXE,
+    coreRelativePath: RA_CORE("vice_x64"),
+    launchProfile: "retroarch",
+    romExtensions: [".d64", ".t64", ".prg", ".crt", ".zip"],
+  },
+  "Commodore Amiga": {
+    romsRelativePath: RA_ROMS("Commodore Amiga"),
+    emulatorRelativePath: RA_EXE,
+    coreRelativePath: RA_CORE("puae"),
+    launchProfile: "retroarch",
+    romExtensions: [".adf", ".hdf", ".lha", ".uae", ".ipf", ".zip"],
+  },
+  Doom: {
+    romsRelativePath: RA_ROMS("Doom"),
+    emulatorRelativePath: RA_EXE,
+    coreRelativePath: RA_CORE("prboom"),
+    launchProfile: "retroarch",
+    romExtensions: [".wad", ".iwad", ".pwad", ".zip"],
+  },
 };
 
 export type ResolvedPlatformConfig = {

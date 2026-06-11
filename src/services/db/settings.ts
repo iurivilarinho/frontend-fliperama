@@ -1,7 +1,6 @@
 import { execute, select } from "./client";
 
 const ADMIN_PASSWORD_KEY = "admin_password_sha256";
-const DEFAULT_ADMIN_PASSWORD = "admin";
 
 export async function getSetting(key: string): Promise<string | null> {
   const rows = await select<{ value: string }>(
@@ -27,25 +26,33 @@ async function sha256Hex(text: string): Promise<string> {
     .join("");
 }
 
+/** Se já existe uma senha de admin definida (primeira execução define uma). */
+export async function hasAdminPassword(): Promise<boolean> {
+  try {
+    return Boolean(await getSetting(ADMIN_PASSWORD_KEY));
+  } catch {
+    return false;
+  }
+}
+
 /**
- * Verifica a senha do admin. Na primeira vez (sem senha cadastrada), usa a
- * senha padrão "admin" e a grava.
+ * Verifica a senha do admin. Sem senha definida (primeira vez), retorna false —
+ * a interface mostra o cadastro inicial em vez de logar com padrão.
  */
 export async function verifyAdminPassword(password: string): Promise<boolean> {
-  let stored = await getSetting(ADMIN_PASSWORD_KEY);
-
-  if (!stored) {
-    stored = await sha256Hex(DEFAULT_ADMIN_PASSWORD);
-    await setSetting(ADMIN_PASSWORD_KEY, stored);
-  }
-
-  const incoming = await sha256Hex(password);
-  return incoming === stored;
+  const stored = await getSetting(ADMIN_PASSWORD_KEY);
+  if (!stored) return false;
+  return (await sha256Hex(password)) === stored;
 }
 
 export async function setAdminPassword(newPassword: string): Promise<void> {
   const hash = await sha256Hex(newPassword);
   await setSetting(ADMIN_PASSWORD_KEY, hash);
+}
+
+/** Remove a senha do admin (usado pelo reset por arquivo). Volta pro cadastro. */
+export async function clearAdminPassword(): Promise<void> {
+  await execute("DELETE FROM settings WHERE key = ?", [ADMIN_PASSWORD_KEY]);
 }
 
 const SHOW_WITHOUT_ROMS_KEY = "show_without_roms";

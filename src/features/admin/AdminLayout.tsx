@@ -3,6 +3,7 @@ import {
   Banknote,
   DoorOpen,
   Gamepad2,
+  ImageDown,
   LayoutDashboard,
   Library,
   LogOut,
@@ -24,6 +25,7 @@ const NAV = [
   { to: "/admin/saves", label: "Saves", icon: Save },
   { to: "/admin/controles", label: "Controles", icon: Gamepad2 },
   { to: "/admin/catalogo", label: "Catálogo", icon: Library },
+  { to: "/admin/arte", label: "Arte / Scraper", icon: ImageDown },
   { to: "/admin/config", label: "Configurações", icon: Settings },
 ];
 

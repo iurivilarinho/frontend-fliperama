@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { Gamepad2, RefreshCw, Wrench } from "lucide-react";
 import { AdminPageHeader } from "../AdminLayout";
+import { GamepadVisual } from "../GamepadVisual";
 import {
   CONTROL_ACTIONS,
   CONTROL_PRESETS,
@@ -152,45 +153,53 @@ export function ControlsPage() {
       />
 
       <div className="space-y-8 p-8">
-        {/* controles conectados + teste */}
-        <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
-          <div className="rounded-xl border border-zinc-800 bg-zinc-900/40 p-4">
-            <div className="mb-2 text-sm font-semibold text-zinc-300">
-              Conectados ({controllers.length})
+        {/* hero: gamepad ao vivo */}
+        <div className="relative overflow-hidden rounded-2xl border border-zinc-800 bg-gradient-to-br from-zinc-900 via-zinc-900/50 to-emerald-950/40 p-6 shadow-2xl">
+          <div className="pointer-events-none absolute -right-16 -top-16 h-56 w-56 rounded-full bg-emerald-500/10 blur-3xl" />
+          <div className="grid grid-cols-1 items-center gap-6 lg:grid-cols-[1.25fr_1fr]">
+            <div className="flex justify-center">
+              <GamepadVisual
+                pressed={new Set(pressed)}
+                type={controllers[0]?.type ?? "generic"}
+              />
             </div>
-            {controllers.length === 0 ? (
-              <p className="text-sm text-zinc-500">
-                Nenhum controle. Conecte e aperte um botão (a API só enxerga após
-                a 1ª interação).
-              </p>
-            ) : (
-              controllers.map((c) => (
-                <div key={c.index} className="flex items-center gap-2 py-1">
-                  <Gamepad2 className="h-5 w-5 text-emerald-400" />
-                  <span className="font-semibold">
-                    {CONTROLLER_LABEL[c.type]}
-                  </span>
-                  <span className="truncate text-xs text-zinc-500">{c.id}</span>
-                </div>
-              ))
-            )}
-          </div>
-          <div className="rounded-xl border border-zinc-800 bg-zinc-900/40 p-4">
-            <div className="mb-2 text-sm font-semibold text-zinc-300">
-              Botões pressionados
-            </div>
-            <div className="flex min-h-7 flex-wrap gap-2">
-              {pressed.length === 0 ? (
-                <span className="text-sm text-zinc-500">(nenhum)</span>
+            <div className="relative">
+              <div className="text-xs font-semibold uppercase tracking-[0.2em] text-emerald-400">
+                {controllers.length > 0 ? "Controle conectado" : "Nenhum controle"}
+              </div>
+              <div className="mt-1 text-3xl font-black">
+                {controllers.length > 0
+                  ? CONTROLLER_LABEL[controllers[0].type]
+                  : "—"}
+              </div>
+              {controllers.length === 0 ? (
+                <p className="mt-2 max-w-sm text-sm text-zinc-400">
+                  Conecte um controle e aperte um botão (a API só enxerga após a
+                  primeira interação). Os botões acendem no desenho ao lado.
+                </p>
               ) : (
-                pressed.map((b) => (
-                  <span
-                    key={b}
-                    className="rounded-md bg-emerald-500/20 px-2 py-0.5 text-xs font-semibold text-emerald-300"
-                  >
-                    {b}
-                  </span>
-                ))
+                <div className="mt-3 space-y-2">
+                  {controllers.map((c) => (
+                    <div
+                      key={c.index}
+                      className="flex items-center gap-2 rounded-lg border border-white/5 bg-black/30 px-3 py-2 text-sm"
+                    >
+                      <Gamepad2 className="h-4 w-4 text-emerald-400" />
+                      <span className="font-semibold">
+                        {CONTROLLER_LABEL[c.type]}
+                      </span>
+                      <span className="truncate text-xs text-zinc-500">
+                        {c.id}
+                      </span>
+                    </div>
+                  ))}
+                  <div className="pt-1 text-xs text-zinc-500">
+                    Pressionados:{" "}
+                    <span className="font-mono text-emerald-300">
+                      {pressed.length ? pressed.join(" · ") : "—"}
+                    </span>
+                  </div>
+                </div>
               )}
             </div>
           </div>

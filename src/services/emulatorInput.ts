@@ -206,8 +206,8 @@ async function applyToMame(
             <port type="P${p}_BUTTON4"><newseq type="standard">${jb(p, m.north)}</newseq></port>
             <port type="P${p}_BUTTON5"><newseq type="standard">${jb(p, m.l1)}</newseq></port>
             <port type="P${p}_BUTTON6"><newseq type="standard">${jb(p, m.r1)}</newseq></port>
-            <port type="START${p}"><newseq type="standard">${jb(p, m.start)}</newseq></port>
-            <port type="COIN${p}"><newseq type="standard">${jb(p, m.select)}</newseq></port>
+            <port type="START${p}"><newseq type="standard">KEYCODE_${p} OR ${jb(p, m.start)}</newseq></port>
+            <port type="COIN${p}"><newseq type="standard">KEYCODE_${p + 4} OR ${jb(p, m.select)}</newseq></port>
             <port type="P${p}_JOYSTICK_UP"><newseq type="standard">JOYCODE_${p}_HAT1UP OR JOYCODE_${p}_YAXIS_UP_SWITCH</newseq></port>
             <port type="P${p}_JOYSTICK_DOWN"><newseq type="standard">JOYCODE_${p}_HAT1DOWN OR JOYCODE_${p}_YAXIS_DOWN_SWITCH</newseq></port>
             <port type="P${p}_JOYSTICK_LEFT"><newseq type="standard">JOYCODE_${p}_HAT1LEFT OR JOYCODE_${p}_XAXIS_LEFT_SWITCH</newseq></port>

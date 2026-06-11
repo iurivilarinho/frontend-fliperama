@@ -45,7 +45,6 @@ export function PaymentTimeSelectionScreen({
   const [timeLeftMs, setTimeLeftMs] = useState<number | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [copied, setCopied] = useState(false);
   const [waiting, setWaiting] = useState(false);
 
   const grantedRef = useRef(false);
@@ -205,17 +204,6 @@ export function PaymentTimeSelectionScreen({
     };
   }, [order, waiting, isExpired, selectedMinutes, grantAccess]);
 
-  const handleCopy = useCallback(async () => {
-    if (!copiaECola) return;
-    try {
-      await navigator.clipboard.writeText(copiaECola);
-      setCopied(true);
-      window.setTimeout(() => setCopied(false), 1500);
-    } catch (caught) {
-      console.error("Falha ao copiar código PIX:", caught);
-    }
-  }, [copiaECola]);
-
   const resetToChoose = useCallback(() => {
     setStep("choose");
     setOrder(null);
@@ -330,29 +318,6 @@ export function PaymentTimeSelectionScreen({
                     </span>
                   </span>
                 )}
-              </div>
-            ) : null}
-
-            {copiaECola ? (
-              <div className="mt-4">
-                <div className="flex items-stretch gap-2">
-                  <input
-                    value={copiaECola}
-                    readOnly
-                    aria-label="Código PIX copia e cola"
-                    className="min-w-0 flex-1 truncate rounded-lg border border-zinc-700 bg-zinc-800 px-3 py-2 text-xs text-zinc-300"
-                  />
-                  <button
-                    type="button"
-                    onClick={() => void handleCopy()}
-                    className="rounded-lg border border-zinc-600 bg-zinc-800 px-4 py-2 text-xs font-semibold hover:border-zinc-400"
-                  >
-                    {copied ? "Copiado" : "Copiar"}
-                  </button>
-                </div>
-                <p className="mt-2 text-xs text-zinc-500">
-                  Copie e cole no app do seu banco, ou escaneie o QR.
-                </p>
               </div>
             ) : null}
 

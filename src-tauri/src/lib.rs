@@ -25,6 +25,33 @@ struct SessionTimer(Arc<AtomicU64>);
 use std::path::{Path, PathBuf};
 use std::process::Command;
 
+/// Simula um toque de tecla (keydown+keyup) pelo código virtual (VK).
+#[cfg(target_os = "windows")]
+fn tap_key(vk: u8) {
+  use windows_sys::Win32::UI::Input::KeyboardAndMouse::{keybd_event, KEYEVENTF_KEYUP};
+  unsafe {
+    keybd_event(vk, 0, 0, 0);
+    std::thread::sleep(std::time::Duration::from_millis(60));
+    keybd_event(vk, 0, KEYEVENTF_KEYUP, 0);
+  }
+}
+
+/// Auto-insere ficha (tecla 5 = COIN1) e dá start (tecla 1 = START1) algumas
+/// vezes enquanto o jogo do MAME carrega, para o jogador não precisar "inserir
+/// moeda" depois de já ter pago. As teclas 5/1 são o padrão do MAME e ficam
+/// mapeadas no default.cfg (ver applyToMame, que mantém KEYCODE_5/KEYCODE_1).
+#[cfg(target_os = "windows")]
+fn auto_insert_coin() {
+  std::thread::spawn(|| {
+    for _ in 0..5 {
+      std::thread::sleep(std::time::Duration::from_secs(3));
+      tap_key(0x35); // '5' = COIN slot 1
+      std::thread::sleep(std::time::Duration::from_millis(180));
+      tap_key(0x31); // '1' = START player 1
+    }
+  });
+}
+
 /// Encerra todos os emuladores conhecidos (à força).
 fn kill_emulators() {
   #[cfg(target_os = "windows")]
@@ -128,6 +155,10 @@ fn launch_mame(mame_path: String, rom_name: String, roms_dir: String) -> Result<
                 e
             )
         })?;
+
+    // Já pagou: credita ficha e inicia automaticamente (sem "insert coin").
+    #[cfg(target_os = "windows")]
+    auto_insert_coin();
 
     Ok(())
 }
@@ -379,6 +410,79 @@ fn stop_running_overlays(app: AppHandle) -> Result<(), String> {
 fn stop_active_game() -> Result<(), String> {
     kill_emulators();
     Ok(())
+}
+
+/// IP de LAN da máquina (para montar o link de acesso remoto ao admin). Usa o
+/// truque do socket UDP: "conectar" a um IP externo não envia nada, mas faz o SO
+/// escolher a interface/origem de saída — daí lemos o IP local. Funciona offline.
+#[tauri::command]
+fn local_ip() -> Option<String> {
+    use std::net::UdpSocket;
+    let socket = UdpSocket::bind("0.0.0.0:0").ok()?;
+    socket.connect("8.8.8.8:80").ok()?;
+    socket.local_addr().ok().map(|addr| addr.ip().to_string())
+}
+
+// ── Mercado Pago (PIX) ───────────────────────────────────────────────────────
+// O app fala direto com a API do Mercado Pago (a webview bloquearia por CORS,
+// então a chamada sai daqui). O token vem da config (cfg_mercadoPagoToken). A
+// resposta crua (JSON) é devolvida ao front, que já espelha o contrato do MP.
+fn mp_err(e: ureq::Error) -> String {
+    match e {
+        ureq::Error::Status(code, resp) => format!(
+            "MP {}: {}",
+            code,
+            resp.into_string().unwrap_or_default()
+        ),
+        other => other.to_string(),
+    }
+}
+
+#[tauri::command]
+async fn mp_create_pix(
+    token: String,
+    amount: f64,
+    description: String,
+    email: String,
+    idempotency: String,
+    date_of_expiration: String,
+) -> Result<String, String> {
+    tauri::async_runtime::spawn_blocking(move || {
+        let mut body = serde_json::json!({
+            "transaction_amount": amount,
+            "description": description,
+            "payment_method_id": "pix",
+            "payer": { "email": email, "first_name": "Totem" }
+        });
+        // Expiração do QR (em minutos), montada no front no formato do MP.
+        if !date_of_expiration.is_empty() {
+            body["date_of_expiration"] = serde_json::Value::String(date_of_expiration);
+        }
+        ureq::post("https://api.mercadopago.com/v1/payments")
+            .set("Authorization", &format!("Bearer {}", token))
+            .set("X-Idempotency-Key", &idempotency)
+            .set("Content-Type", "application/json")
+            .send_json(body)
+            .map_err(mp_err)?
+            .into_string()
+            .map_err(|e| e.to_string())
+    })
+    .await
+    .map_err(|e| e.to_string())?
+}
+
+#[tauri::command]
+async fn mp_payment_status(token: String, id: String) -> Result<String, String> {
+    tauri::async_runtime::spawn_blocking(move || {
+        ureq::get(&format!("https://api.mercadopago.com/v1/payments/{}", id))
+            .set("Authorization", &format!("Bearer {}", token))
+            .call()
+            .map_err(mp_err)?
+            .into_string()
+            .map_err(|e| e.to_string())
+    })
+    .await
+    .map_err(|e| e.to_string())?
 }
 
 fn db_migrations() -> Vec<tauri_plugin_sql::Migration> {
@@ -850,6 +954,9 @@ pub fn run() {
       launch_generic,
       launch_retroarch,
       stop_active_game,
+      local_ip,
+      mp_create_pix,
+      mp_payment_status,
       start_session_timer,
       cancel_session_timer,
       quit_app

@@ -20,8 +20,11 @@ function readSessionRemainingSeconds() {
   if (!raw) return 0;
 
   try {
-    const parsed = JSON.parse(raw) as { remainingSeconds?: number };
-    return Math.max(0, Number(parsed.remainingSeconds) || 0);
+    // A sessão é persistida com o timestamp absoluto de expiração (expiresAtMs),
+    // não com os segundos restantes — calculamos o restante a partir dele.
+    const parsed = JSON.parse(raw) as { expiresAtMs?: number };
+    if (!parsed.expiresAtMs) return 0;
+    return Math.max(0, Math.round((parsed.expiresAtMs - Date.now()) / 1000));
   } catch {
     return 0;
   }

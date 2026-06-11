@@ -1,6 +1,8 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { open } from "@tauri-apps/plugin-dialog";
-import { FolderOpen, Save, HelpCircle } from "lucide-react";
+import { invoke } from "@tauri-apps/api/core";
+import QRCode from "qrcode";
+import { FolderOpen, Save, HelpCircle, QrCode } from "lucide-react";
 import { AdminPageHeader } from "../AdminLayout";
 import {
   getBezelEnabled,
@@ -131,6 +133,10 @@ export function ConfigPage() {
   const [raPass, setRaPass] = useState("");
   const [raMsg, setRaMsg] = useState<string | null>(null);
 
+  const [remoteQr, setRemoteQr] = useState<string | null>(null);
+  const [remoteUrl, setRemoteUrl] = useState<string | null>(null);
+  const [remoteErr, setRemoteErr] = useState<string | null>(null);
+
   const load = useCallback(async () => {
     setLoading(true);
     try {
@@ -189,6 +195,24 @@ export function ConfigPage() {
     setRaHardcoreState(v);
     await setRaHardcore(v);
     await applySavedInGameMapping().catch(() => {});
+  };
+
+  const generateRemoteQr = async () => {
+    setRemoteErr(null);
+    setRemoteQr(null);
+    setRemoteUrl(null);
+    try {
+      const ip = await invoke<string | null>("local_ip");
+      if (!ip) {
+        setRemoteErr("Não foi possível detectar o IP da rede desta máquina.");
+        return;
+      }
+      const url = `http://${ip}:8787/admin`;
+      setRemoteUrl(url);
+      setRemoteQr(await QRCode.toDataURL(url, { width: 240, margin: 1 }));
+    } catch {
+      setRemoteErr("Falha ao gerar o QR Code de acesso remoto.");
+    }
   };
 
   const saveRaCredentials = async () => {
@@ -449,6 +473,47 @@ export function ConfigPage() {
                 />
               </div>
             </div>
+          ) : null}
+        </div>
+
+        {/* Acesso remoto (QR) */}
+        <div className="rounded-xl border border-zinc-800 bg-zinc-900/40 p-5">
+          <div className="flex items-center font-semibold">
+            Acesso remoto (admin pela rede)
+            <HelpHint text="Gera um QR Code com o link deste painel para acessar de outro aparelho (celular ou PC) na MESMA rede Wi-Fi/cabo. Escaneie com a câmera do celular. O totem precisa estar ligado." />
+          </div>
+          <div className="mt-1 max-w-xl text-sm text-zinc-400">
+            Abra o painel de outro aparelho na mesma rede: escaneie o QR Code
+            com a câmera do celular.
+          </div>
+          <div className="mt-3">
+            <Button
+              variant="secondary"
+              onClick={() => void generateRemoteQr()}
+            >
+              <QrCode className="h-4 w-4" /> Gerar QR Code
+            </Button>
+          </div>
+          {remoteQr && remoteUrl ? (
+            <div className="mt-4 flex flex-wrap items-center gap-4">
+              <img
+                src={remoteQr}
+                alt="QR Code de acesso remoto"
+                className="h-40 w-40 rounded-lg bg-white p-2"
+              />
+              <div className="text-sm">
+                <div className="text-zinc-400">Link do painel:</div>
+                <div className="font-mono break-all text-emerald-300">
+                  {remoteUrl}
+                </div>
+                <div className="mt-2 text-xs text-zinc-500">
+                  Funciona enquanto o totem estiver ligado e na mesma rede.
+                </div>
+              </div>
+            </div>
+          ) : null}
+          {remoteErr ? (
+            <p className="mt-3 text-sm text-amber-300">{remoteErr}</p>
           ) : null}
         </div>
 

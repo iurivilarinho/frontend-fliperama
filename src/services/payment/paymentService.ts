@@ -1,9 +1,12 @@
 import axios from "axios";
+import { invoke } from "@tauri-apps/api/core";
 import type {
   CreatePixChargeRequest,
   PixOrder,
   PixPaymentStatus,
 } from "./types";
+import { isTauri } from "../remoteHost";
+import { getMercadoPagoToken } from "../runtimeConfig";
 
 // ── Configuração ──────────────────────────────────────────────────────────
 // Base URL do backend de pagamento. Cai para a API de checklist se não houver
@@ -16,6 +19,25 @@ const PAYMENT_API_URL =
 const CREATE_PIX_PATH = "/payments/pix";
 const PIX_STATUS_PATH = (id: number | string) =>
   `/payments/pix/${encodeURIComponent(String(id))}/status`;
+
+// Tempo de validade do QR PIX (minutos). Depois disso o código expira.
+const PIX_EXPIRATION_MINUTES = 10;
+
+// Data de expiração no formato exigido pelo Mercado Pago
+// (yyyy-MM-ddTHH:mm:ss.SSS±hh:mm, com offset local).
+function mpExpiration(minutes: number): string {
+  const d = new Date(Date.now() + minutes * 60_000);
+  const pad = (n: number) => String(n).padStart(2, "0");
+  const offsetMin = -d.getTimezoneOffset();
+  const sign = offsetMin >= 0 ? "+" : "-";
+  const oh = pad(Math.floor(Math.abs(offsetMin) / 60));
+  const om = pad(Math.abs(offsetMin) % 60);
+  return (
+    `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}` +
+    `T${pad(d.getHours())}:${pad(d.getMinutes())}:${pad(d.getSeconds())}` +
+    `.000${sign}${oh}:${om}`
+  );
+}
 
 function readBoolEnv(value: unknown, fallback: boolean): boolean {
   if (value == null || value === "") return fallback;
@@ -77,6 +99,29 @@ export async function createPixCharge(
     return buildMockOrder(request);
   }
 
+  // No app (Tauri), fala direto com o Mercado Pago via comando Rust (driblando
+  // CORS). Fora do app, usa o backend de pagamento (axios).
+  if (isTauri) {
+    const token = (await getMercadoPagoToken()).trim();
+    if (!token) {
+      throw new Error(
+        "Token do Mercado Pago não configurado (Admin → Configurações).",
+      );
+    }
+    const idempotency = `totem-${Date.now()}-${Math.floor(
+      Math.random() * 1e9,
+    )}`;
+    const json = await invoke<string>("mp_create_pix", {
+      token,
+      amount: request.amount,
+      description: request.description,
+      email: "totem-fliperama@example.com",
+      idempotency,
+      dateOfExpiration: mpExpiration(PIX_EXPIRATION_MINUTES),
+    });
+    return JSON.parse(json) as PixOrder;
+  }
+
   const { data } = await paymentApi.post<PixOrder>(CREATE_PIX_PATH, request);
   return data;
 }
@@ -87,6 +132,20 @@ export async function getPixPaymentStatus(
   if (PAYMENT_MOCK) {
     // No mock o status é controlado pela própria tela (botão de simular).
     return { id, status: "pending" };
+  }
+
+  if (isTauri) {
+    const token = (await getMercadoPagoToken()).trim();
+    const json = await invoke<string>("mp_payment_status", {
+      token,
+      id: String(id),
+    });
+    const parsed = JSON.parse(json) as PixPaymentStatus;
+    return {
+      id: parsed.id ?? id,
+      status: parsed.status,
+      status_detail: parsed.status_detail ?? null,
+    };
   }
 
   const { data } = await paymentApi.get<PixPaymentStatus>(PIX_STATUS_PATH(id));

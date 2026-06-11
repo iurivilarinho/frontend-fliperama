@@ -14,6 +14,7 @@ import {
 import { formatBRL, getPriceForMinutes } from "./session/pricing";
 import { listActiveTiers } from "../../services/db/pricing";
 import type { SessionPaymentInfo } from "./session/PlaySessionContext";
+import { GameCollageBackground } from "./GameCollageBackground";
 
 type PaymentTimeSelectionScreenProps = {
   durationOptionsMinutes: readonly number[];
@@ -232,7 +233,8 @@ export function PaymentTimeSelectionScreen({
 
   return (
     <div className="relative flex h-screen w-screen flex-col items-center justify-center gap-8 overflow-hidden bg-zinc-950 px-6 text-white">
-      <div className="absolute inset-0 bg-[radial-gradient(circle_at_top,rgba(255,255,255,0.08),transparent_60%)]" />
+      <GameCollageBackground />
+      <div className="absolute inset-0 z-0 bg-[radial-gradient(circle_at_top,rgba(255,255,255,0.08),transparent_60%)]" />
 
       {PAYMENT_BYPASS ? (
         <div className="absolute right-4 top-4 z-20 rounded-md border border-amber-400/40 bg-amber-500/15 px-3 py-1 text-xs font-semibold text-amber-200">

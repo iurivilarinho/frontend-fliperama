@@ -47,5 +47,9 @@ export async function loadAttractItems(maxItems = 40): Promise<AttractItem[]> {
     }
   }
 
-  return shuffle(items).slice(0, maxItems);
+  // Prioriza itens COM vídeo (clipes de gameplay são bem mais atrativos que
+  // capas paradas). Se não houver vídeo na biblioteca, cai nas artes.
+  const withVideo = items.filter((i) => i.videoUrl);
+  const withoutVideo = items.filter((i) => !i.videoUrl);
+  return [...shuffle(withVideo), ...shuffle(withoutVideo)].slice(0, maxItems);
 }

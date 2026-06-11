@@ -10,6 +10,9 @@ export default defineConfig({
   server: {
     port: 1420,
     strictPort: true,
+    // Escuta em 0.0.0.0 para o painel admin ser acessível por outra máquina na
+    // mesma rede (http://<ip-do-host>:1420/admin).
+    host: true,
   },
   test: {
     environment: "node",

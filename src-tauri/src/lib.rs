@@ -431,6 +431,143 @@ fn db_migrations() -> Vec<tauri_plugin_sql::Migration> {
   }]
 }
 
+// ── Servidor HTTP embarcado: acesso remoto ao painel admin pela rede ─────────
+// Expõe o banco SQLite via HTTP (POST /api/db/select e /api/db/execute) para que
+// outra máquina na MESMA REDE acesse o painel admin pela web. CORS liberado.
+#[derive(serde::Deserialize)]
+struct SqlReq {
+  sql: String,
+  #[serde(default)]
+  params: Vec<serde_json::Value>,
+}
+
+fn json_to_sqlite(v: &serde_json::Value) -> rusqlite::types::Value {
+  use rusqlite::types::Value;
+  match v {
+    serde_json::Value::Null => Value::Null,
+    serde_json::Value::Bool(b) => Value::Integer(if *b { 1 } else { 0 }),
+    serde_json::Value::Number(n) => {
+      if let Some(i) = n.as_i64() {
+        Value::Integer(i)
+      } else if let Some(f) = n.as_f64() {
+        Value::Real(f)
+      } else {
+        Value::Null
+      }
+    }
+    serde_json::Value::String(s) => Value::Text(s.clone()),
+    other => Value::Text(other.to_string()),
+  }
+}
+
+fn sqlite_to_json(v: rusqlite::types::Value) -> serde_json::Value {
+  use rusqlite::types::Value;
+  match v {
+    Value::Null => serde_json::Value::Null,
+    Value::Integer(i) => serde_json::Value::Number(i.into()),
+    Value::Real(f) => serde_json::json!(f),
+    Value::Text(s) => serde_json::Value::String(s),
+    Value::Blob(b) => serde_json::Value::String(String::from_utf8_lossy(&b).into_owned()),
+  }
+}
+
+fn open_admin_conn(db_path: &Path) -> Result<rusqlite::Connection, String> {
+  let conn = rusqlite::Connection::open(db_path).map_err(|e| e.to_string())?;
+  let _ = conn.busy_timeout(std::time::Duration::from_secs(5));
+  Ok(conn)
+}
+
+fn admin_db_select(db_path: &Path, body: &str) -> Result<String, String> {
+  let req: SqlReq = serde_json::from_str(body).map_err(|e| e.to_string())?;
+  let conn = open_admin_conn(db_path)?;
+  let mut stmt = conn.prepare(&req.sql).map_err(|e| e.to_string())?;
+  let cols: Vec<String> = stmt.column_names().iter().map(|s| s.to_string()).collect();
+  let params: Vec<rusqlite::types::Value> = req.params.iter().map(json_to_sqlite).collect();
+  let refs: Vec<&dyn rusqlite::ToSql> =
+    params.iter().map(|v| v as &dyn rusqlite::ToSql).collect();
+  let mut rows = stmt.query(refs.as_slice()).map_err(|e| e.to_string())?;
+  let mut out: Vec<serde_json::Map<String, serde_json::Value>> = Vec::new();
+  while let Some(row) = rows.next().map_err(|e| e.to_string())? {
+    let mut obj = serde_json::Map::new();
+    for (i, name) in cols.iter().enumerate() {
+      let val: rusqlite::types::Value = row.get(i).map_err(|e| e.to_string())?;
+      obj.insert(name.clone(), sqlite_to_json(val));
+    }
+    out.push(obj);
+  }
+  serde_json::to_string(&out).map_err(|e| e.to_string())
+}
+
+fn admin_db_execute(db_path: &Path, body: &str) -> Result<String, String> {
+  let req: SqlReq = serde_json::from_str(body).map_err(|e| e.to_string())?;
+  let conn = open_admin_conn(db_path)?;
+  let params: Vec<rusqlite::types::Value> = req.params.iter().map(json_to_sqlite).collect();
+  let refs: Vec<&dyn rusqlite::ToSql> =
+    params.iter().map(|v| v as &dyn rusqlite::ToSql).collect();
+  let affected = conn
+    .execute(&req.sql, refs.as_slice())
+    .map_err(|e| e.to_string())?;
+  let last = conn.last_insert_rowid();
+  Ok(format!(
+    "{{\"rowsAffected\":{},\"lastInsertId\":{}}}",
+    affected, last
+  ))
+}
+
+fn start_remote_admin_server(db_path: PathBuf) {
+  std::thread::spawn(move || {
+    let server = match tiny_http::Server::http("0.0.0.0:8787") {
+      Ok(s) => s,
+      Err(e) => {
+        log::error!("admin remoto: nao subiu na porta 8787: {}", e);
+        return;
+      }
+    };
+    log::info!("admin remoto: ouvindo em 0.0.0.0:8787");
+    for mut request in server.incoming_requests() {
+      let cors = [
+        tiny_http::Header::from_bytes(&b"Access-Control-Allow-Origin"[..], &b"*"[..]).unwrap(),
+        tiny_http::Header::from_bytes(&b"Access-Control-Allow-Methods"[..], &b"POST, OPTIONS"[..]).unwrap(),
+        tiny_http::Header::from_bytes(&b"Access-Control-Allow-Headers"[..], &b"Content-Type"[..]).unwrap(),
+        tiny_http::Header::from_bytes(&b"Content-Type"[..], &b"application/json"[..]).unwrap(),
+      ];
+
+      if *request.method() == tiny_http::Method::Options {
+        let mut resp = tiny_http::Response::from_string("").with_status_code(204);
+        for h in cors.iter() {
+          resp.add_header(h.clone());
+        }
+        let _ = request.respond(resp);
+        continue;
+      }
+
+      let url = request.url().to_string();
+      let mut body = String::new();
+      let _ = request.as_reader().read_to_string(&mut body);
+
+      let result = match url.as_str() {
+        "/api/db/select" => admin_db_select(&db_path, &body),
+        "/api/db/execute" => admin_db_execute(&db_path, &body),
+        _ => Err("rota desconhecida".to_string()),
+      };
+
+      let (code, json) = match result {
+        Ok(j) => (200u16, j),
+        Err(e) => (
+          400u16,
+          format!("{{\"error\":{}}}", serde_json::Value::String(e).to_string()),
+        ),
+      };
+
+      let mut resp = tiny_http::Response::from_string(json).with_status_code(code);
+      for h in cors.iter() {
+        resp.add_header(h.clone());
+      }
+      let _ = request.respond(resp);
+    }
+  });
+}
+
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
   tauri::Builder::default()
@@ -523,6 +660,12 @@ let _tray = TrayIconBuilder::new()
             .build(),
         )?;
       }
+
+      // Servidor HTTP para acesso remoto ao painel admin (mesma rede).
+      if let Ok(cfg_dir) = app.path().app_config_dir() {
+        start_remote_admin_server(cfg_dir.join("fliperama.db"));
+      }
+
       Ok(())
     })
     .run(tauri::generate_context!())

@@ -62,7 +62,17 @@ function PlatformBackground({
     );
   }
 
-  return <div className="absolute inset-0 bg-black" />;
+  // Plataforma sem vídeo/arte: usa a logo Retro Nexus como fundo default.
+  return (
+    <div className="absolute inset-0 flex items-center justify-center bg-zinc-950">
+      <img
+        src="/logo.png"
+        alt="Retro Nexus"
+        className="max-h-[55%] max-w-[55%] object-contain opacity-25"
+        draggable={false}
+      />
+    </div>
+  );
 }
 
 export function PlatformSelectionScreen({

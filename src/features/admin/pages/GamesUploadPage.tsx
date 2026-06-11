@@ -84,8 +84,13 @@ export function GamesUploadPage() {
     [refreshUploaded],
   );
 
-  // Drag-and-drop nativo do Tauri (caminhos reais de arquivo).
+  // Drag-and-drop nativo do Tauri (caminhos reais de arquivo). Só no app — num
+  // navegador remoto (admin via rede) não há runtime Tauri e getCurrentWebview()
+  // lança erro síncrono que quebraria a página.
   useEffect(() => {
+    const isTauri =
+      typeof window !== "undefined" && "__TAURI_INTERNALS__" in window;
+    if (!isTauri) return;
     let unlisten: (() => void) | undefined;
     getCurrentWebview()
       .onDragDropEvent((event) => {

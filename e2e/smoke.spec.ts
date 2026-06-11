@@ -19,16 +19,26 @@ test.beforeEach(async ({ page }) => {
   });
 });
 
+// Coleta erros de runtime (exceções não tratadas) durante a navegação.
+function collectErrors(page: import("@playwright/test").Page): string[] {
+  const errors: string[] = [];
+  page.on("pageerror", (e) => errors.push(String(e)));
+  return errors;
+}
+
 test.describe("Totem - shells principais", () => {
   test("tela de pagamento renderiza com opções de tempo", async ({ page }) => {
+    const errors = collectErrors(page);
     await page.goto("/", { waitUntil: "domcontentloaded" });
     await expect(
       page.getByRole("heading", { name: "Pagamento" }),
     ).toBeVisible();
     await expect(page.getByText(/\d+\s*min/).first()).toBeVisible();
+    expect(errors, errors.join("\n")).toHaveLength(0);
   });
 
   test("painel admin exige senha", async ({ page }) => {
+    const errors = collectErrors(page);
     await page.goto("/admin", { waitUntil: "domcontentloaded" });
     // Sem banco no e2e, o admin cai no primeiro acesso ("Definir senha"); com
     // senha já cadastrada mostra "Painel administrativo". Aceita os dois.
@@ -36,5 +46,6 @@ test.describe("Totem - shells principais", () => {
       page.getByText(/Painel administrativo|Definir senha do admin/),
     ).toBeVisible();
     await expect(page.getByPlaceholder(/senha/i).first()).toBeVisible();
+    expect(errors, errors.join("\n")).toHaveLength(0);
   });
 });

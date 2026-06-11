@@ -1,5 +1,5 @@
-import { useCallback, useEffect, useState } from "react";
-import { RefreshCw } from "lucide-react";
+import { useCallback, useEffect, useMemo, useState } from "react";
+import { RefreshCw, Search } from "lucide-react";
 import { AdminPageHeader } from "../AdminLayout";
 import { Spinner } from "../../../components/spinner/Spinner";
 import {
@@ -22,6 +22,17 @@ export function CatalogPage() {
   const [platforms, setPlatforms] = useState<ManageablePlatform[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [filter, setFilter] = useState("");
+  const [profileFilter, setProfileFilter] = useState("all");
+
+  const filtered = useMemo(() => {
+    const q = filter.trim().toLowerCase();
+    return platforms.filter(
+      (p) =>
+        (profileFilter === "all" || p.launchProfile === profileFilter) &&
+        (!q || p.name.toLowerCase().includes(q)),
+    );
+  }, [platforms, filter, profileFilter]);
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -67,9 +78,30 @@ export function CatalogPage() {
           <div className="flex justify-center py-10"><Spinner className="size-10" /></div>
         ) : (
           <>
-            <div className="mb-4 text-sm text-zinc-400">
-              {platforms.length} plataformas no catálogo ·{" "}
-              {platforms.filter((p) => p.enabled).length} habilitadas
+            <div className="mb-4 flex flex-wrap items-center gap-3">
+              <div className="relative">
+                <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-zinc-500" />
+                <input
+                  value={filter}
+                  onChange={(e) => setFilter(e.target.value)}
+                  placeholder="Filtrar plataforma..."
+                  className="w-64 rounded-lg border border-zinc-700 bg-zinc-800 py-2 pl-9 pr-3 text-sm outline-none focus:border-emerald-400"
+                />
+              </div>
+              <select
+                value={profileFilter}
+                onChange={(e) => setProfileFilter(e.target.value)}
+                className="rounded-lg border border-zinc-700 bg-zinc-800 px-3 py-2 text-sm outline-none focus:border-emerald-400"
+              >
+                <option value="all">Todos os perfis</option>
+                <option value="mame">MAME</option>
+                <option value="retroarch">RetroArch</option>
+                <option value="generic">Standalone</option>
+              </select>
+              <span className="text-sm text-zinc-500">
+                {filtered.length} de {platforms.length} ·{" "}
+                {platforms.filter((p) => p.enabled).length} habilitadas
+              </span>
             </div>
             <div className="overflow-x-auto rounded-xl border border-zinc-800">
               <table className="w-full text-sm">
@@ -85,7 +117,7 @@ export function CatalogPage() {
                   </tr>
                 </thead>
                 <tbody>
-                  {platforms.map((p) => (
+                  {filtered.map((p) => (
                     <tr key={p.name} className="border-t border-zinc-800">
                       <td className="px-4 py-3 font-medium">{p.name}</td>
                       <td className="px-4 py-3">

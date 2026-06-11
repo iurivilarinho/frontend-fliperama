@@ -1,11 +1,12 @@
-import { useCallback, useEffect, useState } from "react";
-import { RefreshCw } from "lucide-react";
+import { useCallback, useEffect, useMemo, useState } from "react";
+import { RefreshCw, Search } from "lucide-react";
 import { AdminPageHeader } from "../AdminLayout";
 import {
   reconcileAll,
   type LibraryReport,
   type PlatformReconciliation,
 } from "../../../services/romLibrary";
+import { Spinner } from "../../../components/spinner/Spinner";
 
 function Kpi({ label, value, tone }: { label: string; value: string | number; tone?: string }) {
   return (
@@ -23,6 +24,14 @@ export function RomsPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [selected, setSelected] = useState<PlatformReconciliation | null>(null);
+  const [filter, setFilter] = useState("");
+
+  const filteredPlatforms = useMemo(() => {
+    const q = filter.trim().toLowerCase();
+    const list = report?.platforms ?? [];
+    if (!q) return list;
+    return list.filter((p) => p.platform.toLowerCase().includes(q));
+  }, [report, filter]);
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -60,7 +69,9 @@ export function RomsPage() {
       <div className="p-8">
         {error ? <p className="mb-4 text-sm text-red-400">{error}</p> : null}
         {loading ? (
-          <p className="text-sm text-zinc-400">Analisando catálogo e ROMs...</p>
+          <div className="flex justify-center py-16">
+            <Spinner className="size-12" />
+          </div>
         ) : report ? (
           <>
             <div className="grid grid-cols-2 gap-4 lg:grid-cols-3">
@@ -88,7 +99,22 @@ export function RomsPage() {
               />
             </div>
 
-            <div className="mt-8 overflow-hidden rounded-xl border border-zinc-800">
+            <div className="mt-8 flex items-center gap-2">
+              <div className="relative">
+                <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-zinc-500" />
+                <input
+                  value={filter}
+                  onChange={(e) => setFilter(e.target.value)}
+                  placeholder="Filtrar plataforma..."
+                  className="w-72 rounded-lg border border-zinc-700 bg-zinc-800 py-2 pl-9 pr-3 text-sm outline-none focus:border-emerald-400"
+                />
+              </div>
+              <span className="text-xs text-zinc-500">
+                {filteredPlatforms.length} de {report.platforms.length}
+              </span>
+            </div>
+
+            <div className="mt-3 overflow-hidden rounded-xl border border-zinc-800">
               <table className="w-full text-sm">
                 <thead className="bg-zinc-900/60 text-left text-zinc-400">
                   <tr>
@@ -102,7 +128,7 @@ export function RomsPage() {
                   </tr>
                 </thead>
                 <tbody>
-                  {report.platforms.map((p) => (
+                  {filteredPlatforms.map((p) => (
                     <tr
                       key={p.platform}
                       onClick={() => setSelected(p)}

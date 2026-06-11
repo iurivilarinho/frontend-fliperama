@@ -25,7 +25,7 @@ export function GamepadVisual({
   variant = "generic",
   className = "w-full max-w-xl",
 }: Props) {
-  const v = variant === "pc" ? "generic" : variant;
+  const v = variant;
   const fill = (i: number, base = BASE) => (pressed.has(i) ? ON : base);
   const glow = (i: number) => (pressed.has(i) ? "url(#gv-glow)" : "none");
 
@@ -100,7 +100,7 @@ export function GamepadVisual({
         {defs}
         <Shoulders />
         <path
-          d="M150 64 Q220 50 290 64 Q372 74 388 150 Q400 226 338 234 Q300 238 278 206 L162 206 Q140 238 102 234 Q40 226 52 150 Q68 74 150 64 Z"
+          d="M128 70 Q220 50 312 70 Q374 82 382 132 Q390 178 374 210 Q352 250 308 248 Q282 246 268 218 Q256 200 220 200 Q184 200 172 218 Q158 246 132 248 Q88 250 66 210 Q50 178 58 132 Q66 82 128 70 Z"
           fill="url(#gv-body)"
           stroke="#3f3f46"
           strokeWidth="2"
@@ -126,7 +126,7 @@ export function GamepadVisual({
         {defs}
         <Shoulders />
         <path
-          d="M150 62 Q220 50 290 62 Q360 70 378 132 Q398 210 332 224 Q296 230 276 200 L164 200 Q144 230 108 224 Q42 210 62 132 Q80 70 150 62 Z"
+          d="M150 58 Q220 50 290 58 Q344 64 360 104 Q372 134 372 160 Q396 232 330 236 Q300 238 282 210 Q272 196 262 194 L178 194 Q168 196 158 210 Q140 238 110 236 Q44 232 68 160 Q68 134 80 104 Q96 64 150 58 Z"
           fill="url(#gv-body)"
           stroke="#3f3f46"
           strokeWidth="2"
@@ -143,6 +143,87 @@ export function GamepadVisual({
         <rect x="270" y="80" width="12" height="14" rx="3" fill={fill(9)} filter={glow(9)} />
         <Stick cx={172} cy={166} idx={10} />
         <Stick cx={268} cy={166} idx={11} />
+      </svg>
+    );
+  }
+
+  // ── PC (teclado + mouse) ───────────────────────────────────────────────────
+  if (v === "pc") {
+    const keyFill = (i?: number) =>
+      i != null && pressed.has(i) ? ON : "#27272a";
+    const keyTxt = (i?: number) =>
+      i != null && pressed.has(i) ? "#0a0a0a" : "#a1a1aa";
+    const Key = ({
+      x,
+      y,
+      w = 26,
+      label,
+      i,
+    }: {
+      x: number;
+      y: number;
+      w?: number;
+      label?: string;
+      i?: number;
+    }) => (
+      <g>
+        <rect
+          x={x}
+          y={y}
+          width={w}
+          height="26"
+          rx="4"
+          fill={keyFill(i)}
+          stroke="#3f3f46"
+          filter={i != null ? glow(i) : "none"}
+        />
+        {label ? (
+          <text
+            x={x + w / 2}
+            y={y + 18}
+            fontSize="13"
+            fontWeight="700"
+            textAnchor="middle"
+            fill={keyTxt(i)}
+          >
+            {label}
+          </text>
+        ) : null}
+      </g>
+    );
+    return (
+      <svg viewBox="0 0 440 260" className={className}>
+        {defs}
+        {/* teclado */}
+        <rect x="18" y="64" width="300" height="166" rx="14" fill="url(#gv-body)" stroke="#3f3f46" strokeWidth="2" />
+        {[0, 1, 2, 3, 4, 5, 6, 7, 8].map((n) => (
+          <Key key={n} x={36 + n * 30} y={82} />
+        ))}
+        {/* WASD (movimento) */}
+        <Key x={70} y={116} label="W" i={12} />
+        <Key x={44} y={146} label="A" i={14} />
+        <Key x={70} y={146} label="S" i={13} />
+        <Key x={96} y={146} label="D" i={15} />
+        {/* I/J/K/L (botões, layout diamante) */}
+        <Key x={196} y={116} label="I" i={3} />
+        <Key x={170} y={146} label="J" i={2} />
+        <Key x={196} y={146} label="K" i={0} />
+        <Key x={222} y={146} label="L" i={1} />
+        {/* espaço + enter */}
+        <Key x={96} y={188} w={114} label="ESPAÇO" />
+        <Key x={216} y={188} w={76} label="Enter" i={9} />
+        {/* mouse */}
+        <path
+          d="M356 88 Q356 70 380 70 Q404 70 404 88 L404 176 Q404 208 380 208 Q356 208 356 176 Z"
+          fill="url(#gv-body)"
+          stroke="#3f3f46"
+          strokeWidth="2"
+        />
+        <line x1="380" y1="74" x2="380" y2="122" stroke="#3f3f46" strokeWidth="1.5" />
+        <rect x="376" y="92" width="8" height="18" rx="4" fill="#3f3f46" />
+        <text x="380" y="226" fontSize="11" fontWeight="700" textAnchor="middle" fill="#71717a">
+          mouse
+        </text>
       </svg>
     );
   }

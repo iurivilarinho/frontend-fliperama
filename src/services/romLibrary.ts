@@ -93,7 +93,7 @@ export async function reconcilePlatform(
 }
 
 export async function reconcileAll(): Promise<LibraryReport> {
-  const names = listCatalogPlatformNames();
+  const names = await listCatalogPlatformNames();
   const platforms: PlatformReconciliation[] = [];
 
   for (const name of names) {

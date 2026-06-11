@@ -1,4 +1,6 @@
 import { join } from "@tauri-apps/api/path";
+import { exists, readTextFile } from "@tauri-apps/plugin-fs";
+import { loadRuntimeIniConfig } from "./iniConfig";
 
 /**
  * Perfis de execução suportados.
@@ -235,14 +237,39 @@ export type ResolvedPlatformConfig = {
   romExtensions: string[];
 };
 
-export function getPlatformCatalogEntry(
-  platformName: string,
-): PlatformCatalogEntry | null {
-  return PLATFORM_CATALOG[platformName] ?? null;
+// Plataformas adicionadas dinamicamente (ex.: integração do pack AIO) ficam
+// num JSON na raiz do HyperSpin, pra entrar sem mexer no código.
+let aioCache: Record<string, PlatformCatalogEntry> | null = null;
+
+export async function getAioPlatforms(): Promise<
+  Record<string, PlatformCatalogEntry>
+> {
+  if (aioCache) return aioCache;
+  try {
+    const ini = await loadRuntimeIniConfig();
+    const jsonPath = await join(ini.hyperspinBasePath, "_aio_platforms.json");
+    if (await exists(jsonPath)) {
+      aioCache = JSON.parse(await readTextFile(jsonPath));
+    } else {
+      aioCache = {};
+    }
+  } catch {
+    aioCache = {};
+  }
+  return aioCache ?? {};
 }
 
-export function listCatalogPlatformNames(): string[] {
-  return Object.keys(PLATFORM_CATALOG);
+export async function getPlatformCatalogEntry(
+  platformName: string,
+): Promise<PlatformCatalogEntry | null> {
+  if (PLATFORM_CATALOG[platformName]) return PLATFORM_CATALOG[platformName];
+  const aio = await getAioPlatforms();
+  return aio[platformName] ?? null;
+}
+
+export async function listCatalogPlatformNames(): Promise<string[]> {
+  const aio = await getAioPlatforms();
+  return [...new Set([...Object.keys(PLATFORM_CATALOG), ...Object.keys(aio)])];
 }
 
 /**
@@ -254,7 +281,7 @@ export async function resolvePlatformConfig(
   hyperspinBasePath: string,
   platformName: string,
 ): Promise<ResolvedPlatformConfig | null> {
-  const entry = getPlatformCatalogEntry(platformName);
+  const entry = await getPlatformCatalogEntry(platformName);
   if (!entry) return null;
 
   const romsDir = await join(hyperspinBasePath, entry.romsRelativePath);

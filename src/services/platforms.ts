@@ -29,7 +29,7 @@ export async function listManageablePlatforms(): Promise<ManageablePlatform[]> {
   const ini = await loadRuntimeIniConfig();
   const overrides: Record<string, PlatformConfigOverride> =
     await getAllPlatformConfig().catch(() => ({}));
-  const names = listCatalogPlatformNames();
+  const names = await listCatalogPlatformNames();
 
   const result: ManageablePlatform[] = [];
   for (const name of names) {

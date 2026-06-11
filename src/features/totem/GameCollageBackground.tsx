@@ -1,47 +1,48 @@
 import { useEffect, useState } from "react";
-import { loadAttractItems } from "../../services/attractService";
+
+// Imagens de fundo (tema retrô/arcade) em public/bg. Slideshow em tela cheia.
+const IMAGES = [
+  "/bg/bg1.webp",
+  "/bg/bg2.jpg",
+  "/bg/bg3.png",
+  "/bg/bg4.jpg",
+  "/bg/bg5.webp",
+  "/bg/bg6.png",
+];
+
+const INTERVAL_MS = 7000;
 
 /**
- * Fundo decorativo: mosaico desfocado de artes de jogos da biblioteca, com véu
- * escuro por cima para o conteúdo continuar legível. Usado atrás do card de
- * pagamento para dar cara de plataforma de games.
+ * Fundo da tela de pagamento: slideshow em TELA CHEIA das imagens de arcade,
+ * uma de cada vez com transição suave, e um véu leve só para o card continuar
+ * legível.
  */
 export function GameCollageBackground() {
-  const [imgs, setImgs] = useState<string[]>([]);
+  const [idx, setIdx] = useState(0);
 
   useEffect(() => {
-    let active = true;
-    loadAttractItems(30)
-      .then((items) => {
-        if (!active) return;
-        const urls = items
-          .map((i) => i.imageUrl)
-          .filter((u): u is string => Boolean(u));
-        setImgs(urls.slice(0, 18));
-      })
-      .catch(() => {});
-    return () => {
-      active = false;
-    };
+    const timer = window.setInterval(
+      () => setIdx((i) => (i + 1) % IMAGES.length),
+      INTERVAL_MS,
+    );
+    return () => window.clearInterval(timer);
   }, []);
-
-  if (imgs.length === 0) return null;
 
   return (
     <div className="pointer-events-none absolute inset-0 z-0">
-      <div className="grid h-full w-full grid-cols-3 gap-1 opacity-45 blur-[2px] sm:grid-cols-5 lg:grid-cols-6">
-        {imgs.map((src, i) => (
-          <img
-            key={i}
-            src={src}
-            alt=""
-            className="h-full w-full object-cover"
-            loading="lazy"
-          />
-        ))}
-      </div>
-      {/* véu escuro para legibilidade do card */}
-      <div className="absolute inset-0 bg-gradient-to-b from-zinc-950/85 via-zinc-950/75 to-zinc-950/90" />
+      {IMAGES.map((src, i) => (
+        <img
+          key={src}
+          src={src}
+          alt=""
+          className={[
+            "absolute inset-0 h-full w-full object-cover transition-opacity duration-[1500ms]",
+            i === idx ? "opacity-100" : "opacity-0",
+          ].join(" ")}
+        />
+      ))}
+      {/* véu leve para legibilidade do card */}
+      <div className="absolute inset-0 bg-black/35" />
     </div>
   );
 }

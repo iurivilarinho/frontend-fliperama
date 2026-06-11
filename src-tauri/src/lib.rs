@@ -514,6 +514,64 @@ fn admin_db_execute(db_path: &Path, body: &str) -> Result<String, String> {
   ))
 }
 
+// Localiza a pasta `dist` (frontend buildado) para servir o painel pela rede.
+fn frontend_root() -> Option<PathBuf> {
+  let exe = std::env::current_exe().ok()?;
+  let mut candidates: Vec<PathBuf> = Vec::new();
+  if let Some(dir) = exe.parent() {
+    candidates.push(dir.join("dist"));
+    let mut p = dir.to_path_buf();
+    for _ in 0..3 {
+      if let Some(par) = p.parent() {
+        p = par.to_path_buf();
+      }
+    }
+    candidates.push(p.join("dist"));
+  }
+  candidates.into_iter().find(|c| c.join("index.html").exists())
+}
+
+fn content_type(path: &Path) -> &'static str {
+  match path.extension().and_then(|e| e.to_str()).unwrap_or("") {
+    "html" => "text/html; charset=utf-8",
+    "js" | "mjs" => "text/javascript; charset=utf-8",
+    "css" => "text/css; charset=utf-8",
+    "svg" => "image/svg+xml",
+    "png" => "image/png",
+    "jpg" | "jpeg" => "image/jpeg",
+    "webp" => "image/webp",
+    "gif" => "image/gif",
+    "json" => "application/json",
+    "ico" => "image/x-icon",
+    "woff2" => "font/woff2",
+    "woff" => "font/woff",
+    "ttf" => "font/ttf",
+    _ => "application/octet-stream",
+  }
+}
+
+fn serve_frontend(url: &str, root: &Path) -> Option<(Vec<u8>, &'static str)> {
+  let path = url.split('?').next().unwrap_or("/");
+  if path.contains("..") {
+    return None;
+  }
+  let rel = path.trim_start_matches('/');
+  let candidate = if rel.is_empty() {
+    root.join("index.html")
+  } else {
+    root.join(rel)
+  };
+  if candidate.is_file() {
+    if let Ok(bytes) = std::fs::read(&candidate) {
+      return Some((bytes, content_type(&candidate)));
+    }
+  }
+  // SPA fallback: rotas como /admin -> index.html
+  std::fs::read(root.join("index.html"))
+    .ok()
+    .map(|b| (b, "text/html; charset=utf-8"))
+}
+
 fn start_remote_admin_server(db_path: PathBuf) {
   std::thread::spawn(move || {
     let server = match tiny_http::Server::http("0.0.0.0:8787") {
@@ -523,47 +581,71 @@ fn start_remote_admin_server(db_path: PathBuf) {
         return;
       }
     };
-    log::info!("admin remoto: ouvindo em 0.0.0.0:8787");
+    let root = frontend_root();
+    log::info!(
+      "admin remoto: ouvindo em 0.0.0.0:8787 (frontend servido: {})",
+      root.is_some()
+    );
     for mut request in server.incoming_requests() {
-      let cors = [
-        tiny_http::Header::from_bytes(&b"Access-Control-Allow-Origin"[..], &b"*"[..]).unwrap(),
-        tiny_http::Header::from_bytes(&b"Access-Control-Allow-Methods"[..], &b"POST, OPTIONS"[..]).unwrap(),
-        tiny_http::Header::from_bytes(&b"Access-Control-Allow-Headers"[..], &b"Content-Type"[..]).unwrap(),
-        tiny_http::Header::from_bytes(&b"Content-Type"[..], &b"application/json"[..]).unwrap(),
-      ];
+      let cors_origin =
+        tiny_http::Header::from_bytes(&b"Access-Control-Allow-Origin"[..], &b"*"[..]).unwrap();
+      let method = request.method().clone();
+      let url = request.url().to_string();
 
-      if *request.method() == tiny_http::Method::Options {
+      // Preflight CORS.
+      if method == tiny_http::Method::Options {
         let mut resp = tiny_http::Response::from_string("").with_status_code(204);
-        for h in cors.iter() {
-          resp.add_header(h.clone());
-        }
+        resp.add_header(cors_origin.clone());
+        resp.add_header(
+          tiny_http::Header::from_bytes(&b"Access-Control-Allow-Methods"[..], &b"GET, POST, OPTIONS"[..]).unwrap(),
+        );
+        resp.add_header(
+          tiny_http::Header::from_bytes(&b"Access-Control-Allow-Headers"[..], &b"Content-Type"[..]).unwrap(),
+        );
         let _ = request.respond(resp);
         continue;
       }
 
-      let url = request.url().to_string();
-      let mut body = String::new();
-      let _ = request.as_reader().read_to_string(&mut body);
-
-      let result = match url.as_str() {
-        "/api/db/select" => admin_db_select(&db_path, &body),
-        "/api/db/execute" => admin_db_execute(&db_path, &body),
-        _ => Err("rota desconhecida".to_string()),
-      };
-
-      let (code, json) = match result {
-        Ok(j) => (200u16, j),
-        Err(e) => (
-          400u16,
-          format!("{{\"error\":{}}}", serde_json::Value::String(e).to_string()),
-        ),
-      };
-
-      let mut resp = tiny_http::Response::from_string(json).with_status_code(code);
-      for h in cors.iter() {
-        resp.add_header(h.clone());
+      // API (POST /api/db/*).
+      if url.starts_with("/api/") {
+        let mut body = String::new();
+        let _ = request.as_reader().read_to_string(&mut body);
+        let result = match url.as_str() {
+          "/api/db/select" => admin_db_select(&db_path, &body),
+          "/api/db/execute" => admin_db_execute(&db_path, &body),
+          _ => Err("rota desconhecida".to_string()),
+        };
+        let (code, json) = match result {
+          Ok(j) => (200u16, j),
+          Err(e) => (
+            400u16,
+            format!("{{\"error\":{}}}", serde_json::Value::String(e).to_string()),
+          ),
+        };
+        let mut resp = tiny_http::Response::from_string(json).with_status_code(code);
+        resp.add_header(cors_origin.clone());
+        resp.add_header(
+          tiny_http::Header::from_bytes(&b"Content-Type"[..], &b"application/json"[..]).unwrap(),
+        );
+        let _ = request.respond(resp);
+        continue;
       }
-      let _ = request.respond(resp);
+
+      // Frontend estático (acesso remoto numa porta só: SPA + API no 8787).
+      if let Some(root) = root.as_ref() {
+        if let Some((bytes, ctype)) = serve_frontend(&url, root) {
+          let mut resp = tiny_http::Response::from_data(bytes).with_status_code(200);
+          resp.add_header(
+            tiny_http::Header::from_bytes(&b"Content-Type"[..], ctype.as_bytes()).unwrap(),
+          );
+          resp.add_header(cors_origin.clone());
+          let _ = request.respond(resp);
+          continue;
+        }
+      }
+
+      let _ = request
+        .respond(tiny_http::Response::from_string("nao encontrado").with_status_code(404));
     }
   });
 }

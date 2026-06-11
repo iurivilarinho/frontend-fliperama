@@ -8,6 +8,7 @@ import {
 } from "@tauri-apps/plugin-fs";
 import { loadRuntimeIniConfig } from "./iniConfig";
 import type { InGameButton, InGameMapping } from "./gamepad";
+import { loadInGameMapping, loadNumPlayers } from "./db/controls";
 
 // RetroArch: sufixo do RetroPad -> botão lógico do nosso mapeamento.
 const RA_BTNS: [string, InGameButton][] = [
@@ -235,4 +236,18 @@ export async function applyInGameMapping(
   else skipped.push("MAME (pasta não encontrada)");
 
   return { applied, skipped };
+}
+
+/**
+ * Aplica o mapeamento de controle SALVO (banco) aos emuladores. Chamado no boot
+ * do totem para garantir que, mesmo num RetroArch novo/limpo, os binds corretos
+ * e as travas de atalho (fast-forward, frame advance, etc.) estejam sempre lá —
+ * sem o operador precisar lembrar de clicar em "Aplicar".
+ */
+export async function applySavedInGameMapping(): Promise<ApplyResult> {
+  const [mapping, numPlayers] = await Promise.all([
+    loadInGameMapping(),
+    loadNumPlayers(),
+  ]);
+  return applyInGameMapping(mapping, numPlayers);
 }

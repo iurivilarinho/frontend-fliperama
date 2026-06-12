@@ -65,6 +65,15 @@ async function applyToRetroArch(
   ours.set("video_windowed_fullscreen", "true");
   ours.set("pause_nonactive", "false");
 
+  // CRÍTICO: o RetroArch, por padrão, regrava o retroarch.cfg ao sair, jogando
+  // fora os binds que aplicamos aqui (era por isso que os controles do SNES/
+  // Super Mario World "fugiam" do nosso padrão depois de jogar uma vez). Com
+  // isto desligado, o nosso config é a fonte da verdade. Também ignoramos os
+  // remaps por jogo/núcleo, que poderiam sobrepor o mapeamento padrão.
+  ours.set("config_save_on_exit", "false");
+  ours.set("auto_remaps_enable", "false");
+  ours.set("game_specific_options", "false");
+
   // Visual: shader CRT (scanlines) e bezel (moldura). Caminhos com barra normal
   // (o RetroArch aceita no Windows). Ligados/desligados pelos parâmetros do admin.
   const raDirSlash = raDir.replace(/\\/g, "/");

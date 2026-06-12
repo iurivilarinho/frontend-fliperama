@@ -19,6 +19,9 @@ import { GameCollageBackground } from "./GameCollageBackground";
 type PaymentTimeSelectionScreenProps = {
   durationOptionsMinutes: readonly number[];
   onSelectDuration: (minutes: number, payment?: SessionPaymentInfo) => void;
+  /** Avisa quando o QR do PIX está visível (passo "pay") para suspender o modo
+   * atrair — as animações não podem cobrir o cliente no meio do pagamento. */
+  onPaymentStepChange?: (showingQr: boolean) => void;
 };
 
 type PriceOption = { minutes: number; price: number };
@@ -37,8 +40,16 @@ function formatMsToMMSS(ms: number): string {
 export function PaymentTimeSelectionScreen({
   durationOptionsMinutes,
   onSelectDuration,
+  onPaymentStepChange,
 }: PaymentTimeSelectionScreenProps) {
   const [step, setStep] = useState<Step>("choose");
+
+  // Suspende o modo atrair enquanto o QR do PIX está na tela (e religa ao sair).
+  useEffect(() => {
+    onPaymentStepChange?.(step === "pay");
+    return () => onPaymentStepChange?.(false);
+  }, [step, onPaymentStepChange]);
+
   const [selectedMinutes, setSelectedMinutes] = useState<number | null>(null);
   const [order, setOrder] = useState<PixOrder | null>(null);
   const [qrDataUrl, setQrDataUrl] = useState<string | null>(null);

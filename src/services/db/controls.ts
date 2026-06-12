@@ -67,4 +67,8 @@ export async function loadSelectedPreset(): Promise<string> {
 
 export async function saveSelectedPreset(id: string): Promise<void> {
   await setSetting(PRESET_KEY, id);
+  // Avisa as telas do totem para reavaliar a política de cursor do mouse.
+  if (typeof window !== "undefined") {
+    window.dispatchEvent(new Event("controls-preset-updated"));
+  }
 }

@@ -8,8 +8,9 @@ use tauri::tray::{TrayIconBuilder, TrayIconEvent};
 use windows_sys::Win32::Foundation::HWND;
 use windows_sys::Win32::System::Threading::{AttachThreadInput, GetCurrentThreadId};
 use windows_sys::Win32::UI::WindowsAndMessaging::{
-  FindWindowW, GetForegroundWindow, GetWindowThreadProcessId, SetForegroundWindow, SetWindowPos,
-  HWND_TOPMOST, SWP_NOACTIVATE, SWP_NOMOVE, SWP_NOSIZE, SWP_SHOWWINDOW,
+  EnumWindows, FindWindowW, GetForegroundWindow, GetWindowThreadProcessId, IsWindowVisible,
+  SetForegroundWindow, SetWindowPos, HWND_TOP, HWND_TOPMOST, SWP_NOACTIVATE, SWP_NOMOVE,
+  SWP_NOSIZE, SWP_SHOWWINDOW,
 };
 
 struct FocusState(Mutex<HWND>);
@@ -50,6 +51,83 @@ fn auto_insert_coin() {
       tap_key(0x31); // '1' = START player 1
     }
   });
+}
+
+/// Cede a tela para o emulador: apenas tira o "sempre no topo" da janela
+/// principal (fullscreen). NÃO minimiza/esconde — assim a transição é
+/// "encaixada": o emulador (trazido para frente por `bring_pid_to_front`)
+/// aparece por cima do app, sem a animação feia de minimizar para a barra de
+/// tarefas, e ao fechar o jogo o app reaparece naturalmente por baixo. O
+/// overlay do timer (janela à parte) segue fixado por cima via `start_overlay_pin`.
+fn yield_main_to_game(app: &AppHandle) {
+  if let Some(main) = app.get_webview_window("main") {
+    let _ = main.set_always_on_top(false);
+  }
+}
+
+/// Espera a janela do processo recém-lançado (`pid`) surgir e a traz para frente
+/// (foco + topo do z-order), sem mexer na nossa janela. Roda numa thread porque
+/// o emulador leva um tempo para criar a janela. Como a janela principal já não
+/// é mais "topmost" (ver `yield_main_to_game`), o emulador fica por cima dela.
+#[cfg(target_os = "windows")]
+fn bring_pid_to_front(pid: u32) {
+  struct Find {
+    pid: u32,
+    hwnd: HWND,
+  }
+
+  unsafe extern "system" fn enum_cb(hwnd: HWND, lparam: isize) -> i32 {
+    let find = &mut *(lparam as *mut Find);
+    let mut wpid: u32 = 0;
+    GetWindowThreadProcessId(hwnd, &mut wpid);
+    if wpid == find.pid && IsWindowVisible(hwnd) != 0 {
+      find.hwnd = hwnd;
+      return 0; // achou: para de enumerar
+    }
+    1 // continua
+  }
+
+  std::thread::spawn(move || {
+    // Tenta por ~4s (a janela do emulador pode demorar a aparecer).
+    for _ in 0..40 {
+      std::thread::sleep(std::time::Duration::from_millis(100));
+      let mut find = Find { pid, hwnd: 0 };
+      unsafe {
+        EnumWindows(Some(enum_cb), &mut find as *mut _ as isize);
+      }
+      if find.hwnd != 0 {
+        unsafe {
+          let cur = GetCurrentThreadId();
+          let mut _p: u32 = 0;
+          let tgt = GetWindowThreadProcessId(find.hwnd, &mut _p);
+          // AttachThreadInput contorna a trava de foreground do Windows.
+          AttachThreadInput(cur, tgt, 1);
+          SetForegroundWindow(find.hwnd);
+          SetWindowPos(
+            find.hwnd,
+            HWND_TOP,
+            0,
+            0,
+            0,
+            0,
+            SWP_NOMOVE | SWP_NOSIZE | SWP_NOACTIVATE | SWP_SHOWWINDOW,
+          );
+          AttachThreadInput(cur, tgt, 0);
+        }
+        break;
+      }
+    }
+  });
+}
+
+/// Traz a janela principal de volta (após o jogo encerrar/expirar).
+#[tauri::command]
+fn restore_main_window(app: AppHandle) {
+  if let Some(main) = app.get_webview_window("main") {
+    let _ = main.unminimize();
+    let _ = main.show();
+    let _ = main.set_focus();
+  }
 }
 
 /// Encerra todos os emuladores conhecidos (à força).
@@ -104,7 +182,7 @@ fn quit_app(app: tauri::AppHandle) {
 }
 
 #[tauri::command]
-fn launch_mame(mame_path: String, rom_name: String, roms_dir: String) -> Result<(), String> {
+fn launch_mame(app: AppHandle, mame_path: String, rom_name: String, roms_dir: String) -> Result<(), String> {
     let mame_exists = Path::new(&mame_path).exists();
     let roms_exists = Path::new(&roms_dir).exists();
 
@@ -134,7 +212,7 @@ fn launch_mame(mame_path: String, rom_name: String, roms_dir: String) -> Result<
         )
     })?;
 
-    Command::new(&mame_path)
+    let child = Command::new(&mame_path)
         .current_dir(&mame_dir)
         .arg("-rompath")
         .arg(&roms_dir)
@@ -156,14 +234,22 @@ fn launch_mame(mame_path: String, rom_name: String, roms_dir: String) -> Result<
             )
         })?;
 
-    // Já pagou: credita ficha e inicia automaticamente (sem "insert coin").
+    // Cede a tela e traz o emulador para frente (sem minimizar o app).
+    yield_main_to_game(&app);
     #[cfg(target_os = "windows")]
-    auto_insert_coin();
+    {
+        bring_pid_to_front(child.id());
+        // Já pagou: credita ficha e inicia automaticamente (sem "insert coin").
+        auto_insert_coin();
+    }
+    #[cfg(not(target_os = "windows"))]
+    let _ = child;
 
     Ok(())
 }
 #[tauri::command]
 fn launch_generic(
+    app: AppHandle,
     emulator_path: String,
     rom_path: String,
     args: Option<Vec<String>>,
@@ -194,7 +280,7 @@ fn launch_generic(
     for arg in args.unwrap_or_default() {
         command.arg(arg);
     }
-    command
+    let child = command
         .arg(&rom_path)
         .spawn()
         .map_err(|e| {
@@ -204,11 +290,19 @@ fn launch_generic(
             )
         })?;
 
+    // Cede a tela e traz o emulador para frente (sem minimizar o app).
+    yield_main_to_game(&app);
+    #[cfg(target_os = "windows")]
+    bring_pid_to_front(child.id());
+    #[cfg(not(target_os = "windows"))]
+    let _ = child;
+
     Ok(())
 }
 
 #[tauri::command]
 fn launch_retroarch(
+    app: AppHandle,
     retroarch_path: String,
     core_path: String,
     rom_path: String,
@@ -233,7 +327,7 @@ fn launch_retroarch(
             )
         })?;
 
-    Command::new(&retroarch_path)
+    let child = Command::new(&retroarch_path)
         .current_dir(&retroarch_dir)
         .arg("-L")
         .arg(&core_path)
@@ -245,6 +339,13 @@ fn launch_retroarch(
                 retroarch_path, core_path, rom_path, e
             )
         })?;
+
+    // Cede a tela e traz o emulador para frente (sem minimizar o app).
+    yield_main_to_game(&app);
+    #[cfg(target_os = "windows")]
+    bring_pid_to_front(child.id());
+    #[cfg(not(target_os = "windows"))]
+    let _ = child;
 
     Ok(())
 }
@@ -953,6 +1054,7 @@ pub fn run() {
       launch_mame,
       launch_generic,
       launch_retroarch,
+      restore_main_window,
       stop_active_game,
       local_ip,
       mp_create_pix,

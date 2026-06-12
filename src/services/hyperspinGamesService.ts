@@ -151,6 +151,67 @@ async function loadMameMeta(
   }
 }
 
+/**
+ * Verifica (de forma leve) se a plataforma tem pelo menos um jogo jogável, sem
+ * montar os mapas de mídia (Wheel/Snap/Video) — usado para esconder plataformas
+ * vazias (ex.: Daphne) da seleção. Regras espelham `listHyperspinGames`:
+ * - "mostrar sem ROMs" ligado: basta haver qualquer <game> no XML ou um envio.
+ * - normal: precisa de uma ROM no disco que case com um <game> do XML, ou um
+ *   jogo enviado pelo painel cujo arquivo exista.
+ * Em caso de erro, retorna `true` (fail-open: não esconde por dúvida).
+ */
+export async function platformHasPlayableGames(
+  platformName: string,
+): Promise<boolean> {
+  try {
+    const [showWithoutRoms, uploaded, runtimeConfig] = await Promise.all([
+      getShowWithoutRoms().catch(() => false),
+      listUploadedGames(platformName).catch(
+        () => [] as Awaited<ReturnType<typeof listUploadedGames>>,
+      ),
+      getPlatformRuntimeConfig(platformName),
+    ]);
+
+    // Jogos enviados pelo painel com arquivo no disco já contam.
+    for (const row of uploaded) {
+      if (row.file_path && (await exists(row.file_path))) return true;
+    }
+
+    if (!runtimeConfig) return false;
+
+    const { databasePath } = await loadRuntimeIniConfig();
+    const xmlPath = await join(
+      databasePath,
+      runtimeConfig.databaseFolder,
+      `${runtimeConfig.databaseFolder}.xml`,
+    );
+    if (!(await exists(xmlPath))) return false;
+
+    if (showWithoutRoms) {
+      // Qualquer <game> no XML já basta (o admin optou por mostrar sem ROM).
+      const xml = await readTextFile(xmlPath);
+      return /<game\b/i.test(xml);
+    }
+
+    // Precisa de pelo menos uma ROM no disco que case com um <game> do XML.
+    const romMap = await buildRomMap(
+      runtimeConfig.romsDir,
+      runtimeConfig.romExtensions,
+    ).catch(() => new Map<string, string>());
+    if (romMap.size === 0) return false;
+
+    const xml = await readTextFile(xmlPath);
+    const doc = new DOMParser().parseFromString(xml, "application/xml");
+    for (const el of Array.from(doc.getElementsByTagName("game"))) {
+      const name = el.getAttribute("name")?.trim();
+      if (name && romMap.has(normalizeRomKey(name))) return true;
+    }
+    return false;
+  } catch {
+    return true;
+  }
+}
+
 export async function listHyperspinGames(params: {
   platformName: string;
 }): Promise<HyperspinGame[]> {
@@ -238,6 +299,14 @@ export async function listHyperspinGames(params: {
     if (!rawName) continue;
 
     const romKey = normalizeRomKey(rawName);
+
+    // Alguns bancos do HyperSpin trazem o MESMO jogo repetido (ex.: o SNES tem
+    // ~37 nomes duplicados). Ignora a repetição — senão a roda gera keys iguais
+    // no React e as imagens se sobrepõem / a navegação "pula de dois".
+    if (byKey.has(romKey)) {
+      continue;
+    }
+
     const matchedRomPath = romMap.get(romKey);
     const hasRom = Boolean(matchedRomPath);
 

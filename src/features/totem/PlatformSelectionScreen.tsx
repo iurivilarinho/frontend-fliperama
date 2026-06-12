@@ -5,6 +5,7 @@ import {
   listHyperspinPlatforms,
   type HyperspinPlatformTheme,
 } from "../../services/hyperspinPlatformThemesService";
+import { platformHasPlayableGames } from "../../services/hyperspinGamesService";
 import { HyperspinThemePreview } from "./HyperspinThemePreview";
 import { HyperspinWheel } from "./HyperspinWheel";
 import { Spinner } from "../../components/spinner/Spinner";
@@ -132,7 +133,12 @@ export function PlatformSelectionScreen({
 
     try {
       const items = await listHyperspinPlatforms();
-      setPlatforms(items);
+      // Esconde plataformas sem nenhum jogo jogável (ex.: Daphne) — só entra na
+      // lista quem tem ROM no disco (ou jogo enviado pelo painel).
+      const flags = await Promise.all(
+        items.map((p) => platformHasPlayableGames(p.name)),
+      );
+      setPlatforms(items.filter((_, i) => flags[i]));
       setSelectedIndex(0);
     } catch (error) {
       console.error("Erro real ao ler plataformas do HyperSpin:", error);

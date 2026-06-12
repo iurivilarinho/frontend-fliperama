@@ -10,6 +10,7 @@ import { launchSelectedGame } from "../../services/emulatorLauncher";
 import { Spinner } from "../../components/spinner/Spinner";
 import { VirtualKeyboard } from "./VirtualKeyboard";
 import { loadSelectedPreset } from "../../services/db/controls";
+import { useTotemCursor } from "../../hooks/useTotemCursor";
 import { usePlaySession } from "./session/PlaySessionContext";
 import { HyperspinWheel } from "./HyperspinWheel";
 import { recordGameLaunch } from "../../services/db/usage";
@@ -163,6 +164,9 @@ export function GamesPage() {
     void loadSelectedPreset().then((p) => setArcadeMode(p === "fliperama"));
   }, []);
 
+  // Cursor do totem: estilizado no controle de PC, escondido nos demais.
+  useTotemCursor();
+
   const loadStats = useCallback(async () => {
     if (!platform) return;
     setStats(await getStatsForPlatform(platform.name));
@@ -188,6 +192,9 @@ export function GamesPage() {
     invoke("stop_active_game").catch((error) => {
       console.error("Erro ao encerrar jogo ativo:", error);
     });
+    // Traz o app de volta: ao lançar um jogo a janela principal é minimizada
+    // para o emulador ficar à frente; ao expirar precisamos reexibi-la.
+    invoke("restore_main_window").catch(() => {});
     navigate("/", { replace: true });
     resetSession();
   }, [navigate, resetSession, status]);

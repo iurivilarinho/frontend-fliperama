@@ -1,0 +1,15 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 32 32">
+  <defs>
+    <linearGradient id="body" x1="0" y1="0" x2="0.65" y2="1">
+      <stop offset="0" stop-color="#baf5ff"/>
+      <stop offset="0.45" stop-color="#38bdf8"/>
+      <stop offset="1" stop-color="#6d5cf6"/>
+    </linearGradient>
+  </defs>
+  <!-- contorno escuro (legível em qualquer fundo) -->
+  <path d="M4 2 L4 27.5 L10.6 21.1 L14.8 29.4 L20.1 27 L15.8 18.7 L25 18.3 Z" fill="#0a0f1f"/>
+  <!-- corpo com gradiente -->
+  <path d="M6 5 L6 23.4 L11.1 18.4 L15.1 26.4 L17.6 25.2 L13.5 17.2 L21.1 16.9 Z" fill="url(#body)"/>
+  <!-- brilho na borda (efeito gloss) -->
+  <path d="M6.7 6.4 L6.7 20.7 L9.8 17.6 Z" fill="#ffffff" opacity="0.6"/>
+</svg>

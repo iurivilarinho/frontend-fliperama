@@ -282,6 +282,14 @@ body.overlay-cursor-hidden * {
   cursor: none !important;
 }
 
+/* Telas do totem (controle de PC): cursor estilizado de jogo (estilo GTA/LoL).
+   Arquivo em /public/cursors/pointer.svg — seta com gradiente, brilho e
+   contorno escuro; hotspot na ponta (4,2). Combina com a paleta neon do app. */
+body.cursor-totem,
+body.cursor-totem * {
+  cursor: url("/cursors/pointer.svg") 4 2, auto;
+}
+
 /* aplicado na página /player-mini */
 .mini-root {
   width: 100%;
